@@ -9,7 +9,7 @@ $twig = Plugin::initializeTwig();
 Plugin::createHeader(99);
 
 $loglist_html = file_get_contents("http://localhost:" . lbwebserverport() . "/admin/system/logmanager.cgi?package=" .  urlencode($lbpplugindir) . "&header=none");
-echo $twig->render('log.html', array("loglist" => $loglist_html));
+echo $twig->render('log.html', array("loglist" => $loglist_html, "logfile" => LBPLOGDIR . "/zigbee2mqtt.log"));
 
 //creates the footer
 LBWeb::lbfooter();

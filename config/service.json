@@ -1,4 +1,7 @@
 {
   "permitJoin": true,
-  "port": "/dev/ttyACM0"
+  "port": "/dev/ttyACM0",
+  "channel": "",
+  "availability": true,
+  "frontendPort": "8881"
 }

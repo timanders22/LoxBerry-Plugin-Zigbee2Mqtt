@@ -46,13 +46,13 @@ PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
 #!/bin/bash
-if [ -e /opt/zigbee2mqtt/data ]; then
+if [ -e /opt/zigbee2lox/data ]; then
 	echo "<INFO> Removing zigbee2mqtt symlink from plugin before update"
-	unlink /opt/zigbee2mqtt/data
+	unlink /opt/zigbee2lox/data
 	echo "<INFO> The data symlink will be recreated during installation"
 fi
 
 echo "<INFO> Stopping service if already running"
-if systemctl is-active --quiet zigbee2mqtt; then
-	systemctl stop zigbee2mqtt
+if systemctl is-active --quiet zigbee2lox; then
+	systemctl stop zigbee2lox
 fi

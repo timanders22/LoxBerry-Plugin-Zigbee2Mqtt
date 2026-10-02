@@ -2,6 +2,7 @@
 require_once 'include/plugin.php';
 require_once 'model/ServiceConfig.php';
 require_once 'model/MqttConfig.php';
+require_once LBPBINDIR . '/zigbee2lox.php';
 
 $twig = Plugin::initializeTwig();
 
@@ -20,7 +21,11 @@ else
 {
    $mqtt_installed = LBSystem::plugindata('mqttgateway') ? true : false;
 }
-echo $twig->render('index.html', array("mqtt_installed" => $mqtt_installed));
+echo $twig->render('index.html', array(
+    "mqtt_installed" => $mqtt_installed,
+    "original" => z2l_original_plugin(),
+    "gateway" => z2l_gateway_info(),
+));
 
 //creates the footer
 LBWeb::lbfooter();

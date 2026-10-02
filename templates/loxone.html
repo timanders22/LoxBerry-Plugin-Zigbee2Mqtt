@@ -1,0 +1,118 @@
+<style>
+    .z2l-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+    }
+
+    .z2l-table td,
+    .z2l-table th {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .z2l-table code {
+        word-break: break-all;
+    }
+
+    .z2l-warning {
+        border: 1px solid #e0a000;
+        background: #fff8e0;
+        padding: 8px 12px;
+        margin: 8px 0;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="wide">{{ 'Loxone.Title' | trans }}</div>
+<p><i>{{ 'Loxone.Desc' | trans }}</i></p>
+
+<table class="z2l-table">
+    <tr>
+        <th>{{ 'Loxone.GatewayVersion' | trans }}</th>
+        <td>{% if gateway.version %}V{{ gateway.version }}{% else %}?{% endif %}</td>
+    </tr>
+    <tr>
+        <th>{{ 'Loxone.Transport' | trans }}</th>
+        <td>{% if gateway.use_http %}HTTP {% endif %}{% if gateway.use_udp %}UDP (Port {{ gateway.udpport }}){% endif %}</td>
+    </tr>
+    <tr>
+        <th>{{ 'Loxone.Commands' | trans }}</th>
+        <td><code>/dev/udp/{{ loxberryIp }}/{{ gateway.udpinport }}</code></td>
+    </tr>
+    <tr>
+        <th>{{ 'Loxone.Booleans' | trans }}</th>
+        <td>{% if gateway.convert_booleans %}{{ 'Loxone.BooleansOn' | trans }}{% else %}<span class="z2l-warning">{{ 'Loxone.BooleansOff' | trans }}</span>{% endif %}</td>
+    </tr>
+    {% if hausTopics %}
+    <tr>
+        <th>{{ 'Loxone.Haus' | trans }}</th>
+        <td><code>haus/tuer/&lt;name&gt;/offen</code>, <code>haus/tuer/&lt;name&gt;/verriegelt</code> &rarr; <code>haus_tuer_&lt;name&gt;_offen</code></td>
+    </tr>
+    {% endif %}
+</table>
+
+{% if not hasDeviceList %}
+<div class="z2l-warning">{{ 'Loxone.NoDeviceList' | trans }}</div>
+{% elseif devices|length == 0 %}
+<div class="z2l-warning">{{ 'Loxone.NoDevices' | trans }}</div>
+{% else %}
+
+{% if gateway.use_udp and not gateway.udpport %}
+<div class="z2l-warning">{{ 'Loxone.NoUdpPort' | trans }}</div>
+{% endif %}
+
+<p>
+    <a data-role="button" data-inline="true" data-mini="true" data-icon="arrow-d"
+        href="ajax.php?action=getTemplate&kind=in">{{ 'Loxone.AllInputs' | trans }}</a>
+    <a data-role="button" data-inline="true" data-mini="true" data-icon="arrow-d"
+        href="ajax.php?action=getTemplate&kind=out">{{ 'Loxone.AllOutputs' | trans }}</a>
+</p>
+<p class="hint">{{ 'Loxone.HintTemplates' | trans }}</p>
+
+{% for device in devices %}
+<div data-role="collapsible" data-collapsed="true" data-mini="true">
+    <h3>{{ device.name }} <small>{{ device.vendor }} {{ device.model }}</small></h3>
+    <p>
+        <a data-role="button" data-inline="true" data-mini="true" data-icon="arrow-d"
+            href="ajax.php?action=getTemplate&kind=in&device={{ device.name | url_encode }}">{{ 'Loxone.Inputs' | trans }}</a>
+        {% if device.outputs|length > 0 %}
+        <a data-role="button" data-inline="true" data-mini="true" data-icon="arrow-d"
+            href="ajax.php?action=getTemplate&kind=out&device={{ device.name | url_encode }}">{{ 'Loxone.Outputs' | trans }}</a>
+        {% endif %}
+    </p>
+    <table class="z2l-table">
+        <tr>
+            <th>{{ 'Loxone.Name' | trans }}</th>
+            <th>{{ 'Loxone.HttpName' | trans }}</th>
+            <th>{{ 'Loxone.UdpCheck' | trans }}</th>
+        </tr>
+        {% for in in device.inputs %}
+        <tr>
+            <td>{{ in.title }}{% if in.unit %} ({{ in.unit }}){% endif %}{% if in.text %} - {{ 'Loxone.Text' | trans }}{% endif %}</td>
+            <td><code>{{ in.vi }}</code></td>
+            <td>{% if not in.text %}<code>{{ in.udp }}=\v</code>{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% if device.outputs|length > 0 %}
+    <table class="z2l-table">
+        <tr>
+            <th>{{ 'Loxone.Output' | trans }}</th>
+            <th>{{ 'Loxone.CmdOn' | trans }}</th>
+            <th>{{ 'Loxone.CmdOff' | trans }}</th>
+        </tr>
+        {% for out in device.outputs %}
+        <tr>
+            <td>{{ out.title }}</td>
+            <td><code>{{ out.on }}</code></td>
+            <td><code>{{ out.off }}</code></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</div>
+{% endfor %}
+{% endif %}

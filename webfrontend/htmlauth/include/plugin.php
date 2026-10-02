@@ -22,7 +22,7 @@ class Plugin
         global $configfile;
         $serviceCfg = json_decode(file_get_contents($configfile));
 
-        $template_title = "Zigbee2Mqtt Plugin";
+        $template_title = "Zigbee2Lox";
         $helplink = "https://www.loxwiki.eu/";
         $helptemplate = "help.html";
 
@@ -48,6 +48,10 @@ class Plugin
             $navbar[3]['active'] = null;
         }
        
+
+        $navbar[4]['Name'] = $L["Navbar.Loxone"];
+        $navbar[4]['URL'] = 'loxone.php';
+        $navbar[4]['active'] = null;
 
         $navbar[99]['Name'] = $L["Navbar.Logfiles"];
         $navbar[99]['URL'] = 'log.php';
