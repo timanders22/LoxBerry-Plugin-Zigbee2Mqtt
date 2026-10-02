@@ -56,6 +56,14 @@ echo "<INFO> Plugin installation folder is: $PDIR"
 #source version file
 . ${PTEMPPATH}/version.sh
 
+# Zigbee2Lox installs into its own folder and runs its own service, so it never
+# collides with the original Zigbee2Mqtt plugin (/opt/zigbee2mqtt, zigbee2mqtt.service).
+INSTALLDIR=/opt/zigbee2lox
+SERVICE=zigbee2lox
+# Folder and service of the original plugin, used to take over its data once
+ORIGDIR=zigbee2mqtt
+ORIGSERVICE=zigbee2mqtt
+
 
 ISUPGRADE=0
 if [ -d "/tmp/${PTEMPDIR}_upgrade" ]; then
@@ -76,14 +84,14 @@ if [ -d "/tmp/${PTEMPDIR}_upgrade" ]; then
     fi
 fi
 
-if [ -e /opt/zigbee2mqtt ]; then
+if [ -e $INSTALLDIR ]; then
     echo "<INFO> Removing old zigbee2mqtt installation"
-    rm -f -r /opt/zigbee2mqtt
+    rm -f -r $INSTALLDIR
 fi
 
-git clone --branch $ZIGBEE2MQTT_VERSION --depth 1 https://github.com/Koenkk/zigbee2mqtt.git /opt/zigbee2mqtt
+git clone --branch $ZIGBEE2MQTT_VERSION --depth 1 https://github.com/Koenkk/zigbee2mqtt.git $INSTALLDIR
 
-cd /opt/zigbee2mqtt
+cd $INSTALLDIR
 
 # Get system architecture
 ARCH=$(uname -m)
@@ -109,10 +117,10 @@ esac
 
 wget https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz
 tar -xvf node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz
-mkdir -p /opt/zigbee2mqtt/node
-mv node-$NODE_VERSION-linux-$NODE_ARCH/* /opt/zigbee2mqtt/node/
+mkdir -p $INSTALLDIR/node
+mv node-$NODE_VERSION-linux-$NODE_ARCH/* $INSTALLDIR/node/
 rm -rf node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz
-export PATH=/opt/zigbee2mqtt/node/bin:$PATH
+export PATH=$INSTALLDIR/node/bin:$PATH
 
 
 npm install -g "$(node -p "require('./package.json').packageManager")"
@@ -129,42 +137,68 @@ if [ $retval -ne 0 ]; then
 fi
 
 echo "<INFO> Remove default data folder"
-rm -f -r /opt/zigbee2mqtt/data
+rm -f -r $INSTALLDIR/data
 
-chown -R loxberry:loxberry /opt/zigbee2mqtt
+chown -R loxberry:loxberry $INSTALLDIR
 
 echo "<INFO> Remove temporary folders"
 rm -f -r /tmp/${PTEMPDIR}_upgrade
 
 echo "<INFO> Linking log to log folder"
-ln -f -s $PLOG /opt/zigbee2mqtt/log
+ln -f -s $PLOG $INSTALLDIR/log
 
 echo "<INFO> Updating data folder"
-ln -f -s $PDATA /opt/zigbee2mqtt/data
+ln -f -s $PDATA $INSTALLDIR/data
+
+# Fresh installation next to (or instead of) the original Zigbee2Mqtt plugin:
+# take over its network so no device has to be paired again.
+MIGRATED=0
+ORIGDATA=$LBHOMEDIR/data/plugins/$ORIGDIR
+ORIGCONFIG=$LBHOMEDIR/config/plugins/$ORIGDIR
+if [ "$ISUPGRADE" -eq "0" ] && [ "$PDIR" != "$ORIGDIR" ] && [ -f "$ORIGDATA/configuration.yaml" ] && [ ! -f "$PDATA/configuration.yaml" ]; then
+    echo "<INFO> Original Zigbee2Mqtt plugin found - taking over its Zigbee network"
+    if systemctl is-active --quiet $ORIGSERVICE; then
+        echo "<INFO> Stopping service $ORIGSERVICE of the original plugin (only one service may use the Zigbee adapter)"
+        systemctl stop $ORIGSERVICE
+    fi
+    if systemctl is-enabled --quiet $ORIGSERVICE 2>/dev/null; then
+        systemctl disable $ORIGSERVICE
+    fi
+    cp -a "$ORIGDATA/." "$PDATA/"
+    for f in mqtt.json service.json; do
+        if [ -f "$ORIGCONFIG/$f" ]; then
+            cp -f "$ORIGCONFIG/$f" "$PCONFIG/$f"
+        fi
+    done
+    MIGRATED=1
+    echo "<WARNING> The original Zigbee2Mqtt plugin is still installed. Please uninstall it - an update of the original would start its service again and both would fight for the Zigbee adapter."
+fi
 
 echo "<INFO> Refresh config"
 php $PBIN/update-config.php
 
 chown loxberry:loxberry $PDATA/* -R
+chown loxberry:loxberry $PCONFIG/* -R
 
 # if we have a new installation we setup the encryption
 # https://github.com/romanlum/LoxBerry-Plugin-Zigbee2Mqtt/issues/13
-if [ "$ISUPGRADE" -eq "0" ]; then
+# A taken over network already has its key - generating a new one would cut off every device.
+if [ "$ISUPGRADE" -eq "0" ] && [ "$MIGRATED" -eq "0" ]; then
     echo "<INFO> Fresh installation detected - Set encryption key"
     php $PBIN/setup-encryption.php
 fi
 
 echo "<INFO> Updating service config"
 if [ "$PIVERS" = 'type_0' ] || [ "$PIVERS" = 'type_1' ]; then
-    ln -f -s $PCONFIG/zigbee2mqttNode10.service /etc/systemd/system/zigbee2mqtt.service
+    ln -f -s $PCONFIG/zigbee2loxNode10.service /etc/systemd/system/$SERVICE.service
 else
-    ln -f -s $PCONFIG/zigbee2mqtt.service /etc/systemd/system/zigbee2mqtt.service
+    ln -f -s $PCONFIG/zigbee2lox.service /etc/systemd/system/$SERVICE.service
 fi
 
-# Enable auto-start of zigbee2mqtt service
+# Enable auto-start of the service
 systemctl daemon-reload
-systemctl enable zigbee2mqtt
-systemctl start zigbee2mqtt
+systemctl enable $SERVICE
+systemctl start $SERVICE
 
 # Exit with Status 0
 exit 0

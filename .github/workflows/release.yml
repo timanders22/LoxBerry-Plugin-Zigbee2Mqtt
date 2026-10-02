@@ -34,4 +34,4 @@ jobs:
           force-add: "true"
           files: release.cfg
           name: release-bot
-          email: release-bot@lumetsnet.at
+          email: release-bot@users.noreply.github.com

@@ -4,5 +4,8 @@
   "username": "",
   "password": "",
   "server": "",
-  "port": ""
+  "port": "",
+  "registerMqttTopic": true,
+  "forwardMode": "devices",
+  "hausTopics": false
 }

@@ -6,6 +6,7 @@ require_once "model/ServiceConfig.php";
 require_once "model/MqttConfig.php";
 require_once LBPBINDIR . "/defines.php";
 require_once LBPBINDIR . "/formHelper.php";
+require_once LBPBINDIR . "/zigbee2lox.php";
 
 $log = LBLog::newLog(["name" => "Service"]);
 
@@ -25,6 +26,12 @@ if (isset($_GET["action"])) {
         sendresponse(200, "application/json", applyChanges());
     } else if ($action == "getPid") {
         sendresponse(200, "application/json", getPid());
+    } else if ($action == "getSerialPorts") {
+        sendresponse(200, "application/json", json_encode(z2l_serial_ports()));
+    } else if ($action == "getRadioInfo") {
+        sendresponse(200, "application/json", getRadioInfo());
+    } else if ($action == "getTemplate") {
+        getTemplate(isset($_GET["kind"]) ? $_GET["kind"] : "", isset($_GET["device"]) ? $_GET["device"] : "");
     }
 }
 
@@ -36,7 +43,8 @@ function applyChanges()
 
     LOGSTART("Restart zigbee2mqtt service");
     shell_exec("php " . LBPBINDIR . "/update-config.php");
-    shell_exec("sudo systemctl restart zigbee2mqtt -q");
+    global $serviceName;
+    shell_exec("sudo systemctl restart " . escapeshellarg($serviceName) . " -q");
     LOGOK("Restart ok");
     LOGEND("Restarted zigbee2mqtt service");
 
@@ -125,8 +133,77 @@ function setDevices($formData)
 function getPid()
 {
     //fetches the pid or 0 if not running
-    $pid = shell_exec("systemctl show --property MainPID --value zigbee2mqtt");
-    return "{\"pid\":$pid }";
+    global $serviceName;
+    $pid = (int) shell_exec("systemctl show --property MainPID --value " . escapeshellarg($serviceName));
+    return json_encode(array("pid" => $pid));
+}
+
+/**
+ * Zigbee and Thread channel. Both use the same 2.4 GHz channels (IEEE 802.15.4,
+ * 11-26), so a Thread network of Matter2Lox on the same channel disturbs Zigbee.
+ */
+function getRadioInfo()
+{
+    list($zigbee, $zigbeeSource) = z2l_zigbee_channel();
+    list($thread, $threadSource) = z2l_thread_channel();
+    $level = "ok";
+    if ($thread && $thread == $zigbee) {
+        $level = "conflict";
+    } elseif ($thread && abs($thread - $zigbee) == 1) {
+        $level = "adjacent";
+    }
+    return json_encode(array(
+        "zigbee" => $zigbee,
+        "zigbeeSource" => $zigbeeSource,
+        "thread" => $thread,
+        "threadSource" => $threadSource,
+        "level" => $level,
+        "original" => z2l_original_plugin(),
+    ));
+}
+
+/**
+ * Loxone template as download: kind "in" (virtual UDP input) or "out"
+ * (virtual output), for one device or all devices
+ */
+function getTemplate($kind, $device)
+{
+    global $mqttconfigfile, $configfile, $bridgeDevicesFile;
+    $mqttcfg = json_decode(file_get_contents($mqttconfigfile));
+    $serviceCfg = json_decode(file_get_contents($configfile));
+    $availability = !property_exists($serviceCfg, 'availability') || is_enabled($serviceCfg->availability);
+    $ios = z2l_device_ios($mqttcfg->topic, z2l_read_json($bridgeDevicesFile, array()), $availability);
+    if ($device !== "") {
+        $ios = array_values(array_filter($ios, function ($d) use ($device) {
+            return $d["name"] === $device;
+        }));
+        if (count($ios) == 0) {
+            sendresponse(404, "application/json", '{"error":"device not found"}');
+        }
+    }
+    $gateway = z2l_gateway_info();
+    $title = $device !== "" ? "Zigbee " . $device : "Zigbee2Lox";
+    $inputs = array();
+    $outputs = array();
+    foreach ($ios as $d) {
+        $inputs = array_merge($inputs, $d["inputs"]);
+        $outputs = array_merge($outputs, $d["outputs"]);
+    }
+    $file = preg_replace('/[^A-Za-z0-9_\-]+/', '_', $title);
+    if ($kind == "in") {
+        $xml = z2l_xml_virtual_in_udp($title, $gateway["udpport"], $inputs);
+        $file = "VIU_" . $file . ".xml";
+    } else if ($kind == "out") {
+        $address = "/dev/udp/" . LBSystem::get_localip() . "/" . $gateway["udpinport"];
+        $xml = z2l_xml_virtual_out($title, $address, $outputs);
+        $file = "VO_" . $file . ".xml";
+    } else {
+        sendresponse(400, "application/json", '{"error":"unknown kind"}');
+    }
+    header("Content-Type: application/xml; charset=utf-8");
+    header('Content-Disposition: attachment; filename="' . $file . '"');
+    echo $xml;
+    exit(0);
 }
 
 function sendresponse($httpstatus, $contenttype, $response = null)

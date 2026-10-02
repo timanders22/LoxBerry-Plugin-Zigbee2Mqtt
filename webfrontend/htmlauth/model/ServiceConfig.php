@@ -38,6 +38,25 @@ class ServiceConfig {
      * @var bool
      */
     public $enableUI = false;
+
+    /**
+     * Port of the zigbee2mqtt ui
+     * @var string
+     */
+    public $frontendPort = '8881';
+
+    /**
+     * Zigbee channel (11-26). Empty string means: leave the value in
+     * configuration.yaml untouched.
+     * @var string
+     */
+    public $channel = '';
+
+    /**
+     * Publish the availability (online/offline) of every device
+     * @var bool
+     */
+    public $availability = true;
     /**
      * Creates a new instance
      */

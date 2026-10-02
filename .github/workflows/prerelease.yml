@@ -32,7 +32,7 @@ jobs:
           force-add: "true"
           files: prerelease.cfg
           name: release-bot
-          email: release-bot@lumetsnet.at
+          email: release-bot@users.noreply.github.com
   add_artifacts:
     name: Add artifacts
     runs-on: ubuntu-latest

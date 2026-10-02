@@ -44,6 +44,20 @@ class MqttConfig
     public $registerMqttTopic = false;
 
     /**
+     * What is registered on the mqtt gateway: "devices" (only the state
+     * topics of devices and groups) or "all" (<topic>/#)
+     * @var string
+     */
+    public $forwardMode = 'devices';
+
+    /**
+     * Publish doors and locks under haus/tuer/<name>/offen|verriegelt
+     * (house convention shared with Matter2Lox)
+     * @var bool
+     */
+    public $hausTopics = false;
+
+    /**
      * Creats a new instance
      */
     public function __construct()

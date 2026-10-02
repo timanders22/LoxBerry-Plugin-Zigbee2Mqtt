@@ -51,6 +51,26 @@
         color: red;
     }
 
+    .z2l-warning {
+        border: 1px solid #e0a000;
+        background: #fff8e0;
+        padding: 8px 12px;
+        margin: 8px 0;
+        border-radius: 4px;
+    }
+
+    .z2l-error {
+        border: 1px solid #c00;
+        background: #ffecec;
+        padding: 8px 12px;
+        margin: 8px 0;
+        border-radius: 4px;
+    }
+
+    .z2l-ok {
+        color: green;
+    }
+
     @media (min-width: 28em) {
 
         /*Repeated from rule .ui-flipswitch above*/
@@ -60,9 +80,16 @@
     }
 </style>
 
+{% if original.installed %}
+<div class="z2l-warning">
+    <b>{{ 'Common.OriginalTitle' | trans }}</b><br>
+    {% if original.active %}{{ 'Common.OriginalActive' | trans }}{% else %}{{ 'Common.OriginalInstalled' | trans }}{% endif %}
+</div>
+{% endif %}
+
 <!-- Form SETTINGS -->
 <form id="ServiceConfig" onsubmit="return false;">
-    <div class="wide">Zigbee2Mqtt</div>
+    <div class="wide">Zigbee2Lox</div>
     <p><i>{{ 'ServiceConfig.Desc' | trans }}</i></p>
 
     <!-- Service -->
@@ -107,7 +134,10 @@
         <div class="lb_flex-item-spacer"></div>
         <div class="lb_flex-item">
             <input width="100%" value="" id="ServiceConfig[port]" name="ServiceConfig[port]" type="text"
-                class="textfield">
+                class="textfield" list="serialports" autocomplete="off">
+            <datalist id="serialports"></datalist>
+            <div id="portwarning" class="z2l-warning" style="display:none" data-text="{{ 'ServiceConfig.PortUnstable' | trans }}"></div>
+            <div id="portlist" class="hint" data-title="{{ 'ServiceConfig.PortList' | trans }}"></div>
         </div>
         <div class="lb_flex-item-spacer"></div>
         <div class="lb_flex-item-help hint">
@@ -163,6 +193,61 @@
         <div class="lb_flex-item-spacer"></div>
         <div class="lb_flex-item-help hint">
             {{'ServiceConfig.HintRtscts' | trans}}
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+    </div>
+
+    <div class="lb_flex-container">
+        <div class="lb_flex-item-label">
+            <label class="control-label" for="ServiceConfig[channel]">{{ 'ServiceConfig.LabelChannel' | trans }}</label>
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item">
+            <select width="100%" id="ServiceConfig[channel]" name="ServiceConfig[channel]" data-mini="true">
+                <option value="">{{ 'ServiceConfig.ChannelUnset' | trans }}</option>
+                {% for c in 11..26 %}<option value="{{ c }}">{{ c }}{% if c in [11, 15, 20, 25] %} (ZLL){% endif %}</option>
+                {% endfor %}
+            </select>
+            <div id="radioinfo" class="hint" data-zigbee="{{ 'ServiceConfig.RadioZigbee' | trans }}"
+                data-thread="{{ 'ServiceConfig.RadioThread' | trans }}" data-ok="{{ 'ServiceConfig.RadioOk' | trans }}"
+                data-adjacent="{{ 'ServiceConfig.RadioAdjacent' | trans }}"
+                data-conflict="{{ 'ServiceConfig.RadioConflict' | trans }}"></div>
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item-help hint">
+            {{ 'ServiceConfig.HintChannel' | trans }}
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+    </div>
+
+    <div class="lb_flex-container">
+        <div class="lb_flex-item-label">
+            <label class="control-label" for="ServiceConfig[availability]">{{ 'ServiceConfig.LabelAvailability' | trans }}</label>
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item">
+            <input type="checkbox" name="ServiceConfig[availability]" id="ServiceConfig[availability]">
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item-help hint">
+            {{ 'ServiceConfig.HintAvailability' | trans }}
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+    </div>
+
+    <div class="lb_flex-container">
+        <div class="lb_flex-item-label">
+            <label class="control-label" for="ServiceConfig[frontendPort]">{{ 'ServiceConfig.LabelFrontendPort' | trans }}</label>
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item">
+            <input width="100%" value="" id="ServiceConfig[frontendPort]" name="ServiceConfig[frontendPort]" type="text"
+                class="textfield" data-validation-rule="special:number-min-max-value:1:65535"
+                data-validation-error-msg="{{ 'Mqtt.ValInvalidPort' | trans }}">
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item-help hint">
+            {{ 'ServiceConfig.HintFrontendPort' | trans }}
         </div>
         <div class="lb_flex-item-spacer"></div>
     </div>
@@ -223,6 +308,27 @@
         <div class="lb_flex-item-spacer"></div>
     </div>
 
+
+    <div class="lb_flex-container">
+        <div class="lb_flex-item-label">
+            <label class="control-label" for="MqttConfig[forwardMode]">{{ 'Mqtt.LabelForwardMode' | trans }}</label>
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item">
+            <select width="100%" id="MqttConfig[forwardMode]" name="MqttConfig[forwardMode]" data-mini="true">
+                <option value="devices">{{ 'Mqtt.ForwardDevices' | trans }}</option>
+                <option value="all">{{ 'Mqtt.ForwardAll' | trans }}</option>
+            </select>
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item-help hint">
+            {{ 'Mqtt.HintForwardMode' | trans }}
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+    </div>
+    {% if gateway.version >= 2 %}
+    <div class="lb_flex-container"><div class="hint">{{ 'Mqtt.GatewayV2' | trans }}</div></div>
+    {% endif %}
     <div class="lb_flex-container MQTT">
         <div class="lb_flex-item-label">
         </div>
@@ -308,6 +414,21 @@
         <div class="lb_flex-item-spacer"></div>
     </div>
 
+
+    <div class="lb_flex-container">
+        <div class="lb_flex-item-label">
+            <label class="control-label" for="MqttConfig[hausTopics]">{{ 'Mqtt.LabelHausTopics' | trans }}</label>
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item">
+            <input type="checkbox" name="MqttConfig[hausTopics]" id="MqttConfig[hausTopics]">
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+        <div class="lb_flex-item-help hint">
+            {{ 'Mqtt.HintHausTopics' | trans }}
+        </div>
+        <div class="lb_flex-item-spacer"></div>
+    </div>
     <div style="padding: 0px 0px 20px 0px;"></div>
 
 </form>
