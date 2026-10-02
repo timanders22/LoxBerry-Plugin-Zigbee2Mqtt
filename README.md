@@ -4,7 +4,7 @@ Zigbee2Lox bringt [Zigbee2MQTT](https://www.zigbee2mqtt.io/) als Plugin auf den 
 Zusammenspiel mit anderen Plugins ausgelegt – insbesondere mit
 [Matter2Lox (Matter to Loxone)](https://github.com/timanders22/LoxBerry-Plugin-Matter2Lox).
 
-Zigbee2Lox ist ein Fork des Plugins [Zigbee2Mqtt von Roman Lumetsberger](https://github.com/romanlum/LoxBerry-Plugin-Zigbee2Mqtt).
+Zigbee2Lox ist ein Fork des Plugins [Zigbee2Mqtt](https://github.com/romanlum/LoxBerry-Plugin-Zigbee2Mqtt) (Apache-2.0, siehe `LICENSE`).
 Es ist ein **eigenständiges Plugin** (Name/Ordner `zigbee2lox`, Dienst `zigbee2lox`, Installation in `/opt/zigbee2lox`)
 und kollidiert deshalb nicht mit dem Original.
 
