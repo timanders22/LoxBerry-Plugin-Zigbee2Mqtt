@@ -1,0 +1,61 @@
+/* Shared styles of all Zigbee2MqttNG pages */
+.zng-warning {
+    border: 1px solid #e0a000;
+    background: #fff8e0;
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+}
+
+.zng-error {
+    border: 1px solid #c00;
+    background: #ffecec;
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+}
+
+.zng-ok { color: #6dac20; }
+.zng-fail { color: #c62828; }
+.zng-hint { color: #e0620d; }
+.zng-info { color: #546e7a; }
+.zng-small { font-size: 85%; color: #666; }
+
+.zng-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.zng-table td,
+.zng-table th {
+    border-bottom: 1px solid #ddd;
+    padding: 4px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.zng-table code {
+    word-break: break-all;
+}
+
+.zng-buttons {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    flex-wrap: wrap;
+}
+
+.zng-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.submitting { color: grey; }
+.saveok { color: green; }
+.saveerror { color: red; }
+.zng-field-error { outline: 2px solid #c62828; }
+
+#service_running { color: green; }
+#service_not_running { color: red; }

@@ -1,7 +1,15 @@
 {
-  "permitJoin": true,
-  "port": "/dev/ttyACM0",
+  "port": "",
+  "adapter": "",
+  "baudrate": "",
+  "rtscts": "",
+  "enableUI": false,
+  "frontendPort": "8881",
+  "frontendAuth": true,
+  "frontendToken": "",
   "channel": "",
   "availability": true,
-  "frontendPort": "8881"
+  "notifyOffline": true,
+  "notifyBattery": true,
+  "batteryThreshold": "15"
 }

@@ -1,3 +1,11 @@
+<style>
+    #page_content {
+        margin: 0px !important;
+    }
+</style>
+{% if service.frontendAuth and service.frontendToken %}
+<p class="hint">{{ 'Devices.UIToken' | trans }} <code>{{ service.frontendToken }}</code></p>
+{% endif %}
 <iframe id="zngui" scrolling="yes" seamless="seamless" style="width:100%; height:85vh;" frameborder="0"></iframe>
 <script>
     document.getElementById("zngui").src = window.location.protocol + "//" + window.location.hostname + ":{{ port }}";

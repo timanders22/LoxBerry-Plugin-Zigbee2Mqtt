@@ -65,10 +65,12 @@ if [ -e  /etc/systemd/system/zigbee2mqttng.service ]; then
     systemctl daemon-reload
 fi
 
-if [ -e /opt/zigbee2mqttng ]; then
-    echo "<INFO> Removing zigbee2mqtt installation"
-    rm -f -r /opt/zigbee2mqttng
-fi
+for dir in /opt/zigbee2mqttng /opt/zigbee2mqttng.new /opt/zigbee2mqttng.old; do
+    if [ -e "$dir" ]; then
+        echo "<INFO> Removing $dir"
+        rm -f -r "$dir"
+    fi
+done
 
 if [ -f "$PDATA/zigbee2mqttng_haus.json" ] && [ -f "$PBIN/clear-haus-topics.php" ]; then
     echo "<INFO> Removing haus/tuer topics"

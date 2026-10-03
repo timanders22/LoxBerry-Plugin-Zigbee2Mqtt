@@ -67,6 +67,8 @@ SERVICE=zigbee2mqttng
 PREDECESSORS="zigbee2lox zigbee2mqtt"
 
 
+BUILDDIR=$INSTALLDIR.new
+
 ISUPGRADE=0
 if [ -d "/tmp/${PTEMPDIR}_upgrade" ]; then
     echo "<INFO> Upgrade detected"
@@ -85,72 +87,88 @@ if [ -d "/tmp/${PTEMPDIR}_upgrade" ]; then
         cp -f -r /tmp/${PTEMPDIR}_upgrade/data/$PDIR/* $LBHOMEDIR/data/plugins/$PDIR/
     fi
 fi
+rm -f -r /tmp/${PTEMPDIR}_upgrade
 
-if [ -e $INSTALLDIR ]; then
-    echo "<INFO> Removing old zigbee2mqtt installation"
-    rm -f -r $INSTALLDIR
+# ---------------------------------------------------------------------------
+# Build zigbee2mqtt in $BUILDDIR. The running installation in $INSTALLDIR is
+# only replaced once the build succeeded - a failed download or build keeps
+# the previous zigbee2mqtt, so the Zigbee network keeps working.
+# ---------------------------------------------------------------------------
+BUILD_OK=0
+BUILD_ERROR=""
+
+build_zigbee2mqtt() {
+    ARCH=$(uname -m)
+    case $ARCH in
+      x86_64)  NODE_ARCH="x64" ;;
+      aarch64) NODE_ARCH="arm64" ;;
+      armv7l)  NODE_ARCH="armv7l" ;;
+      *)
+        BUILD_ERROR="Unsupported architecture $ARCH - zigbee2mqtt needs x86_64, aarch64 or armv7l"
+        return 1
+        ;;
+    esac
+
+    rm -f -r "$BUILDDIR"
+    echo "<INFO> Downloading zigbee2mqtt $ZIGBEE2MQTT_VERSION"
+    git clone --quiet --branch "$ZIGBEE2MQTT_VERSION" --depth 1 https://github.com/Koenkk/zigbee2mqtt.git "$BUILDDIR" \
+        || { BUILD_ERROR="Could not download zigbee2mqtt $ZIGBEE2MQTT_VERSION (internet connection?)"; return 1; }
+    cd "$BUILDDIR" || { BUILD_ERROR="Could not enter $BUILDDIR"; return 1; }
+
+    # NODE_VERSION is set in version.sh
+    echo "<INFO> Downloading Node.js $NODE_VERSION ($NODE_ARCH)"
+    NODE_TAR="node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz"
+    wget -q "https://nodejs.org/dist/$NODE_VERSION/$NODE_TAR" \
+        || { BUILD_ERROR="Could not download Node.js $NODE_VERSION"; return 1; }
+    mkdir -p "$BUILDDIR/node"
+    tar -xf "$NODE_TAR" --strip-components=1 -C "$BUILDDIR/node" \
+        || { BUILD_ERROR="Could not unpack Node.js $NODE_VERSION"; return 1; }
+    rm -f "$NODE_TAR"
+    export PATH=$BUILDDIR/node/bin:$PATH
+
+    echo "<INFO> Node.js $(node --version)"
+    npm install -g --silent "$(node -p "require('./package.json').packageManager")" \
+        || { BUILD_ERROR="Could not install the package manager of zigbee2mqtt"; return 1; }
+    echo "<INFO> Installing the dependencies of zigbee2mqtt (pnpm $(pnpm --version))"
+    pnpm i --frozen-lockfile || { BUILD_ERROR="pnpm install failed"; return 1; }
+
+    echo "<INFO> Building zigbee2mqtt"
+    pnpm run build || { BUILD_ERROR="Build of zigbee2mqtt failed"; return 1; }
+
+    # The data folder becomes a link to the plugin data folder
+    rm -f -r "$BUILDDIR/data"
+    return 0
+}
+
+if build_zigbee2mqtt; then
+    cd /
+    echo "<INFO> Replacing the zigbee2mqtt installation"
+    rm -f -r "$INSTALLDIR.old"
+    if [ -e "$INSTALLDIR" ]; then
+        mv "$INSTALLDIR" "$INSTALLDIR.old"
+    fi
+    mv "$BUILDDIR" "$INSTALLDIR"
+    rm -f -r "$INSTALLDIR.old"
+    BUILD_OK=1
+    echo "<OK> zigbee2mqtt $ZIGBEE2MQTT_VERSION installed"
+else
+    cd /
+    rm -f -r "$BUILDDIR"
+    if [ -x "$INSTALLDIR/node/bin/node" ] && [ -f "$INSTALLDIR/index.js" ]; then
+        echo "<ERROR> $BUILD_ERROR. The previous zigbee2mqtt installation is kept and started again. Please install the plugin again later."
+    else
+        echo "<FAIL> $BUILD_ERROR. zigbee2mqtt is not installed."
+        exit 2
+    fi
 fi
-
-git clone --branch $ZIGBEE2MQTT_VERSION --depth 1 https://github.com/Koenkk/zigbee2mqtt.git $INSTALLDIR
-
-cd $INSTALLDIR
-
-# Get system architecture
-ARCH=$(uname -m)
-
-# Map architecture to Node.js download URL
-case $ARCH in
-  x86_64)
-    NODE_ARCH="x64"
-    ;;
-  aarch64)
-    NODE_ARCH="arm64"
-    ;;
-  armv7l)
-    NODE_ARCH="armv7l"
-    ;;
-  *)
-    echo "Unsupported architecture: $ARCH"
-    exit 1
-    ;;
-esac
-
-# NODE_VERSION is set in version.sh
-
-wget https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz
-tar -xvf node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz
-mkdir -p $INSTALLDIR/node
-mv node-$NODE_VERSION-linux-$NODE_ARCH/* $INSTALLDIR/node/
-rm -rf node-$NODE_VERSION-linux-$NODE_ARCH.tar.xz
-export PATH=$INSTALLDIR/node/bin:$PATH
-
-
-npm install -g "$(node -p "require('./package.json').packageManager")"
-node --version  
-pnpm --version  
-pnpm i --frozen-lockfile
-
-# Build Zigbee2MQTT
-pnpm run build
-retval="$?"
-if [ $retval -ne 0 ]; then
-    echo "npm install failed"
-    exit $retval
-fi
-
-echo "<INFO> Remove default data folder"
-rm -f -r $INSTALLDIR/data
 
 chown -R loxberry:loxberry $INSTALLDIR
 
-echo "<INFO> Remove temporary folders"
-rm -f -r /tmp/${PTEMPDIR}_upgrade
-
 echo "<INFO> Linking log to log folder"
-ln -f -s $PLOG $INSTALLDIR/log
+ln -s -f -n $PLOG $INSTALLDIR/log
 
 echo "<INFO> Updating data folder"
-ln -f -s $PDATA $INSTALLDIR/data
+ln -s -f -n $PDATA $INSTALLDIR/data
 
 # Fresh installation next to (or instead of) a predecessor plugin: take over
 # its network so no device has to be paired again.
@@ -179,6 +197,26 @@ for ORIGDIR in $PREDECESSORS; do
             cp -f "$ORIGCONFIG/$f" "$PCONFIG/$f"
         fi
     done
+    # The MQTT gateway reads the subscriptions of every installed plugin. The
+    # predecessor would otherwise keep <topic>/# (original) or its device
+    # list registered until it is uninstalled.
+    for f in mqtt_subscriptions.cfg mqtt_conversions.cfg mqtt_resetaftersend.cfg; do
+        if [ -f "$ORIGCONFIG/$f" ]; then
+            : > "$ORIGCONFIG/$f"
+        fi
+    done
+    # An update of the predecessor would enable and start its service again.
+    # Zigbee2Lox even fetches its updates from this repository and would
+    # install Zigbee2MqttNG again every night.
+    perl -I"$LBHOMEDIR/libs/perllib" -e '
+        use LoxBerry::System::PluginDB;
+        foreach my $md5 (LoxBerry::System::PluginDB->search(folder => $ARGV[0])) {
+            my $plugin = LoxBerry::System::PluginDB->plugin(md5 => $md5);
+            next if (!$plugin);
+            $plugin->{autoupdate} = "0";
+            $plugin->save();
+        }' "$ORIGDIR" && echo "<INFO> Automatic updates of $ORIGDIR disabled" \
+        || echo "<WARNING> Could not disable the automatic updates of $ORIGDIR. Please uninstall $ORIGDIR."
 
     if [ "$ORIGDIR" = "zigbee2lox" ]; then
         # The copied bridge extension of Zigbee2Lox must not be loaded next to
@@ -192,17 +230,6 @@ for ORIGDIR in $PREDECESSORS; do
         # The haus/tuer topics belong to this plugin now - the uninstall of
         # Zigbee2Lox must not delete them.
         rm -f "$ORIGDATA/zigbee2lox_haus.json"
-        # Zigbee2Lox fetches its updates from this repository. Without this its
-        # auto update would install Zigbee2MqttNG again every night.
-        perl -I"$LBHOMEDIR/libs/perllib" -e '
-            use LoxBerry::System::PluginDB;
-            foreach my $md5 (LoxBerry::System::PluginDB->search(folder => "zigbee2lox")) {
-                my $plugin = LoxBerry::System::PluginDB->plugin(md5 => $md5);
-                next if (!$plugin);
-                $plugin->{autoupdate} = "0";
-                $plugin->save();
-            }' && echo "<INFO> Automatic updates of Zigbee2Lox disabled" \
-            || echo "<WARNING> Could not disable the automatic updates of Zigbee2Lox. Please uninstall Zigbee2Lox."
     fi
 
     MIGRATED=1
@@ -224,16 +251,14 @@ if [ "$ISUPGRADE" -eq "0" ] && [ "$MIGRATED" -eq "0" ]; then
 fi
 
 echo "<INFO> Updating service config"
-if [ "$PIVERS" = 'type_0' ] || [ "$PIVERS" = 'type_1' ]; then
-    ln -f -s $PCONFIG/zigbee2mqttngNode10.service /etc/systemd/system/$SERVICE.service
-else
-    ln -f -s $PCONFIG/zigbee2mqttng.service /etc/systemd/system/$SERVICE.service
-fi
+ln -f -s $PCONFIG/zigbee2mqttng.service /etc/systemd/system/$SERVICE.service
 
 # Enable auto-start of the service
 systemctl daemon-reload
 systemctl enable $SERVICE
 systemctl start $SERVICE
 
-# Exit with Status 0
+if [ "$BUILD_OK" -ne "1" ]; then
+    exit 1
+fi
 exit 0

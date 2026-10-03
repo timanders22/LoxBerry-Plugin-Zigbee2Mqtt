@@ -1,0 +1,46 @@
+{# One line of a LoxBerry form: label, field, help text #}
+{% macro row(for, label, field, hint, class) %}
+<div class="lb_flex-container {{ class }}">
+    <div class="lb_flex-item-label">
+        <label class="control-label" for="{{ for }}">{{ label }}</label>
+    </div>
+    <div class="lb_flex-item-spacer"></div>
+    <div class="lb_flex-item">
+        {{ field | raw }}
+    </div>
+    <div class="lb_flex-item-spacer"></div>
+    <div class="lb_flex-item-help hint">
+        {{ hint }}
+    </div>
+    <div class="lb_flex-item-spacer"></div>
+</div>
+{% endmacro %}
+
+{# Save button with the messages above it #}
+{% macro savebutton() %}
+<div id="validationerrors" class="zng-error" style="display:none" data-title="{{ 'Common.ValidationError' | trans }}"></div>
+<div class="zng-center" style="height:16px;min-height:16px">
+    <span id="savemessages">
+        <span class="submitting" style="display: none;">{{ 'Common.Submitting' | trans }}</span>
+        <span class="saveok" style="display: none;">{{ 'Common.HintSaveOK' | trans }}</span>
+        <span class="saveerror" style="display: none;">{{ 'Common.HintSaveError' | trans }}</span>
+    </span>
+</div>
+<div class="zng-center">
+    <button class="ui-btn ui-btn-icon-right" id="saveapply" data-inline="true">{{ 'Common.SaveApply' | trans }}</button>
+</div>
+<div class="zng-center">
+    <span style="display:none" id="service_running">{{ 'Common.ServiceRunning' | trans }} (PID <span id="servicepid">0</span>)</span>
+    <span style="display:none" id="service_not_running">{{ 'Common.ServiceNotRunning' | trans }}</span>
+</div>
+{% endmacro %}
+
+{# Warning for every predecessor plugin that is still installed #}
+{% macro predecessors(list) %}
+{% for p in list %}
+<div class="zng-warning">
+    <b>{{ 'Common.OriginalTitle' | trans | replace({'%s': p.title}) }}</b><br>
+    {% if p.active %}{{ 'Common.OriginalActive' | trans }}{% else %}{{ 'Common.OriginalInstalled' | trans }}{% endif %}
+</div>
+{% endfor %}
+{% endmacro %}

@@ -46,7 +46,7 @@ PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
 #!/bin/bash
-if [ -e /opt/zigbee2mqttng/data ]; then
+if [ -L /opt/zigbee2mqttng/data ] || [ -e /opt/zigbee2mqttng/data ]; then
 	echo "<INFO> Removing zigbee2mqtt symlink from plugin before update"
 	unlink /opt/zigbee2mqttng/data
 	echo "<INFO> The data symlink will be recreated during installation"

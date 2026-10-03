@@ -6,10 +6,16 @@ function MakeObjectFromArray(ReflectionClass $class, array $values)
 {
     // we do not call the constructor yet
     $instance = $class->newInstanceWithoutConstructor();
-    // first we set each property to their respective value
+    // first we set each property to their respective value; fields that are
+    // no property of the class (e.g. from an older page) are ignored
     foreach ($values as $name => $value) {
+        if (!$class->hasProperty($name)) {
+            continue;
+        }
         $property = $class->getProperty($name);
-        $property->setAccessible(true);
+        if (!$property->isPublic() || $property->isStatic()) {
+            continue;
+        }
         $property->setValue($instance, $value);
     }
     // note that we have set primitive values to our object properties

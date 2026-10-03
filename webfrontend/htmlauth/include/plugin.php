@@ -11,6 +11,15 @@ require __DIR__ . '/vendor/autoload.php';
  */
 class Plugin
 {
+    // Tabs of the house standard (Einstellungen, MQTT, Einbindung in Loxone,
+    // Test, Logdateien) plus Geraete - like "Geraete anlernen" in Matter2Lox
+    const SETTINGS = 1;
+    const DEVICES = 2;
+    const MQTT = 3;
+    const LOXONE = 4;
+    const TEST = 5;
+    const LOG = 99;
+
     /**
      * Creates the page header
      * $L is globally available from defines.php
@@ -18,76 +27,49 @@ class Plugin
      */
     static function createHeader($activePage)
     {
-
-        global $configfile;
-        $serviceCfg = json_decode(file_get_contents($configfile));
-
         $template_title = "Zigbee2MqttNG";
-        $helplink = "https://www.loxwiki.eu/";
+        $helplink = "https://github.com/timanders22/LoxBerry-Plugin-Zigbee2MqttNG#readme";
         $helptemplate = "help.html";
 
         global $navbar;
         global $htmlhead;
         global $L;
 
-        $navbar[1]['Name'] = $L["Navbar.Settings"];
-        $navbar[1]['URL'] = 'index.php';
-        $navbar[1]['Script'] = 'index.js';
-        $navbar[1]['active'] = null;
+        $navbar[self::SETTINGS]['Name'] = $L["Navbar.Settings"];
+        $navbar[self::SETTINGS]['URL'] = 'index.php';
+        $navbar[self::SETTINGS]['Script'] = array('common.js', 'index.js');
 
-        $navbar[2]['Name'] = $L["Navbar.Devices"];
-        $navbar[2]['URL'] = 'devices.php';
-        $navbar[2]['active'] = null;
-        $navbar[2]['Script'] = array('vendor/ace.js', 'devices.js');
+        $navbar[self::DEVICES]['Name'] = $L["Navbar.Devices"];
+        $navbar[self::DEVICES]['URL'] = 'devices.php';
+        $navbar[self::DEVICES]['Script'] = array('vendor/ace.js', 'vendor/vis-network.min.js', 'common.js', 'devices.js');
 
-        if(is_enabled($serviceCfg->enableUI))
-        {
-            $navbar[3]['Name'] = $L["Navbar.UI"];
-            $navbar[3]['URL'] = 'ui.php';
-            $navbar[3]['CSS'] = 'ui.css';
-            $navbar[3]['active'] = null;
+        $navbar[self::MQTT]['Name'] = $L["Navbar.Mqtt"];
+        $navbar[self::MQTT]['URL'] = 'mqtt.php';
+        $navbar[self::MQTT]['Script'] = array('common.js', 'mqtt.js');
+
+        $navbar[self::LOXONE]['Name'] = $L["Navbar.Loxone"];
+        $navbar[self::LOXONE]['URL'] = 'loxone.php';
+
+        $navbar[self::TEST]['Name'] = $L["Navbar.Test"];
+        $navbar[self::TEST]['URL'] = 'test.php';
+
+        $navbar[self::LOG]['Name'] = $L["Navbar.Logfiles"];
+        $navbar[self::LOG]['URL'] = 'log.php';
+
+        foreach (array_keys($navbar) as $key) {
+            $navbar[$key]['active'] = null;
         }
-       
-
-        $navbar[4]['Name'] = $L["Navbar.Loxone"];
-        $navbar[4]['URL'] = 'loxone.php';
-        $navbar[4]['active'] = null;
-
-        $navbar[99]['Name'] = $L["Navbar.Logfiles"];
-        $navbar[99]['URL'] = 'log.php';
-        $navbar[99]['active'] = null;
-
-
         $navbar[$activePage]['active'] = true;
-        $script = null;
-        $css = null;
-        if (in_array('Script', $navbar[$activePage])) {
-            $script = $navbar[$activePage]['Script'];
-        }
-        if (in_array('CSS', $navbar[$activePage])) {
-            $css = $navbar[$activePage]['CSS'];
-        }
-        // this script is included in the loxberry header
-        if ($script != null) {
-            if (is_array($script)) {
-                foreach ($script as $value) {
-                    $htmlhead .= '<script src="js/' . $value . '"></script>';
-                }
-            } else {
-                $htmlhead = '<script src="js/' . $script . '"></script>';
-            }
-        }
 
-        // this css is included in the loxberry header
-        if ($css != null) {
-            if (is_array($css)) {
-                foreach ($css as $value) {
-                    $htmlhead .= '<link rel="stylesheet" href="css/' . $value . '"></link>';
-                }
-            } else {
-                $htmlhead = '<link rel="stylesheet" href="css/' . $css . '"></link>';
-            }
+        // scripts and styles of the active page go into the LoxBerry header
+        $page = $navbar[$activePage];
+        foreach (isset($page['Script']) ? (array) $page['Script'] : array() as $value) {
+            $htmlhead .= '<script src="js/' . $value . '"></script>';
         }
+        foreach (isset($page['CSS']) ? (array) $page['CSS'] : array() as $value) {
+            $htmlhead .= '<link rel="stylesheet" href="css/' . $value . '">';
+        }
+        $htmlhead .= '<link rel="stylesheet" href="css/plugin.css">';
 
         // Creates the loxberry header
         LBWeb::lbheader($template_title, $helplink, $helptemplate);
@@ -106,7 +88,7 @@ class Plugin
         ]);
 
         $filter = new \Twig\TwigFilter('trans', function ($string) use ($L) {
-            return $L[$string];
+            return isset($L[$string]) ? $L[$string] : $string;
         });
         $twig->addFilter($filter);
         return $twig;

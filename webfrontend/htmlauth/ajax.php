@@ -7,21 +7,25 @@ require_once "model/MqttConfig.php";
 require_once LBPBINDIR . "/defines.php";
 require_once LBPBINDIR . "/formHelper.php";
 require_once LBPBINDIR . "/zigbee2mqttng.php";
+require_once "include/Z2mBridge.php";
 
 $log = LBLog::newLog(["name" => "Service"]);
 
 if (isset($_GET["action"])) {
     $action = $_GET["action"];
+    if (!requestFromPluginPage($action)) {
+        sendresponse(403, "application/json", '{"result":false,"error":"request not accepted"}');
+    }
     if ($action == "getFormData") {
         if (isset($_GET["form"])) {
             sendresponse(200, "application/json", getFormData($_GET["form"]));
         }
     } else if ($action == "setFormData") {
         if (isset($_GET["form"])) {
-            sendresponse(200, "application/json", setFormData($_GET["form"], $_POST));
+            setFormData($_GET["form"], $_POST);
         }
     } else if ($action == "setDevices") {
-        sendresponse(200, "application/json", setDevices($_POST));
+        setDevices();
     } else if ($action == "applyChanges") {
         sendresponse(200, "application/json", applyChanges());
     } else if ($action == "getPid") {
@@ -29,10 +33,39 @@ if (isset($_GET["action"])) {
     } else if ($action == "getSerialPorts") {
         sendresponse(200, "application/json", json_encode(zng_serial_ports()));
     } else if ($action == "getRadioInfo") {
-        sendresponse(200, "application/json", getRadioInfo());
+        sendresponse(200, "application/json", json_encode(zng_radio_info()));
+    } else if ($action == "testPort") {
+        sendresponse(200, "application/json", json_encode(zng_test_port(isset($_POST["port"]) ? $_POST["port"] : "")));
+    } else if ($action == "permitJoin") {
+        sendresponse(200, "application/json", permitJoin(isset($_POST["time"]) ? $_POST["time"] : ""));
+    } else if ($action == "networkMap") {
+        sendresponse(200, "application/json", networkMap());
     } else if ($action == "getTemplate") {
         getTemplate(isset($_GET["kind"]) ? $_GET["kind"] : "", isset($_GET["device"]) ? $_GET["device"] : "");
     }
+    sendresponse(400, "application/json", '{"result":false,"error":"unknown action"}');
+}
+
+/**
+ * The plugin pages call this endpoint with jQuery, which marks its
+ * same-origin requests with "X-Requested-With: XMLHttpRequest". A link, a
+ * form or an image on another web site cannot set this header, and a script
+ * on another site would need a CORS preflight that this endpoint does not
+ * answer. Because the browser sends the LoxBerry login along with such
+ * requests, actions that change something or return settings are only
+ * accepted with the header, and changing actions only as POST.
+ * getTemplate is a plain download link and changes nothing.
+ */
+function requestFromPluginPage($action)
+{
+    $changing = array("setFormData", "setDevices", "applyChanges", "permitJoin", "testPort", "networkMap");
+    $protected = array_merge($changing, array("getFormData"));
+    if (!in_array($action, $protected, true)) {
+        return true;
+    }
+    $xhr = isset($_SERVER["HTTP_X_REQUESTED_WITH"]) && $_SERVER["HTTP_X_REQUESTED_WITH"] === "XMLHttpRequest";
+    $post = isset($_SERVER["REQUEST_METHOD"]) && $_SERVER["REQUEST_METHOD"] === "POST";
+    return $xhr && ($post || !in_array($action, $changing, true));
 }
 
 /**
@@ -40,15 +73,12 @@ if (isset($_GET["action"])) {
  */
 function applyChanges()
 {
-
-    LOGSTART("Restart zigbee2mqtt service");
-    shell_exec("php " . LBPBINDIR . "/update-config.php");
     global $serviceName;
+    LOGSTART("Restart zigbee2mqtt service");
+    shell_exec("php " . escapeshellarg(LBPBINDIR . "/update-config.php"));
     shell_exec("sudo systemctl restart " . escapeshellarg($serviceName) . " -q");
     LOGOK("Restart ok");
     LOGEND("Restarted zigbee2mqtt service");
-
-
     return '{"result":true}';
 }
 
@@ -57,74 +87,85 @@ function applyChanges()
  */
 function getFormData($form)
 {
-
     switch ($form) {
         case "ServiceConfig":
-            $data = ServiceConfig::load();
-            return $data->toJson();
-            break;
+            return ServiceConfig::load()->toJson();
         case "MqttConfig":
-            $data = MqttConfig::load();
-            return $data->toJson();
-            break;
+            // without the password - it never goes to the browser
+            return MqttConfig::load()->toFormJson();
     }
     return "{}";
 }
 
 /**
- * Sets the form data
+ * Checks and saves the form data. Answers {"result":true} or
+ * {"result":false,"errors":[{"form","message"}]}.
  */
 function setFormData($form, $formData)
 {
-    $class = null;
+    global $L;
     switch ($form) {
         case "ServiceConfig":
             $class = new ReflectionClass(ServiceConfig::class);
+            $saved = ServiceConfig::load();
             break;
         case "MqttConfig":
             $class = new ReflectionClass(MqttConfig::class);
+            $saved = MqttConfig::load();
             break;
-
         default:
             sendresponse(400, "application/json", '{"result":false}');
-            exit(1);
     }
 
-    foreach ($formData[$class->getName()] as $name => $value) {
-        if ($value == "on" || $value == "true")
-            $formData[$class->getName()][$name] = true;
-        if ($value == "off" || $value == "false")
-            $formData[$class->getName()][$name] = false;
+    $values = isset($formData[$class->getName()]) && is_array($formData[$class->getName()]) ? $formData[$class->getName()] : array();
+    foreach ($values as $name => $value) {
+        if ($value === "on" || $value === "true") {
+            $values[$name] = true;
+        }
+        if ($value === "off" || $value === "false") {
+            $values[$name] = false;
+        }
+    }
+    // rtscts is a three-way select: "", "true", "false" - kept as text
+    if ($form == "ServiceConfig" && isset($formData["ServiceConfig"]["rtscts"])) {
+        $values["rtscts"] = (string) $formData["ServiceConfig"]["rtscts"];
     }
 
-    $data = MakeObjectFromArray($class, $formData[$class->getName()]);
+    $data = MakeObjectFromArray($class, $values);
+    $data->keepFrom($saved);
+    $errors = array();
+    foreach ($data->validate() as $key) {
+        $errors[] = array("form" => $form, "message" => isset($L[$key]) ? $L[$key] : $key);
+    }
+    if ($errors) {
+        sendresponse(200, "application/json", json_encode(array("result" => false, "errors" => $errors)));
+    }
     $data->save();
-    return '{"result": true}';
+    sendresponse(200, "application/json", '{"result":true}');
 }
 
 /**
- * Sets the device data
+ * Saves devices.yaml (sent as text/plain)
  */
-function setDevices($formData)
+function setDevices()
 {
-    global $deviceDataFile;
+    global $deviceDataFile, $L;
 
     LOGSTART("Update device configuration");
 
     $data = file_get_contents('php://input');
-    if (yaml_parse($data) == FALSE) {
-        LOGERR("Sent device configuration invalid was invalid");
+    $parsed = trim($data) === "" ? array() : @yaml_parse($data);
+    // an empty file or "{}" is fine, a list or a single value is not
+    if ($parsed === false || !(is_array($parsed) || $parsed === null) || (is_array($parsed) && $parsed && array_keys($parsed) === range(0, count($parsed) - 1))) {
+        LOGERR("Sent device configuration is invalid");
         LOGEND("Update failed");
-        sendresponse(400, "application/json", '{ "error" : "Configuration not valid." }');
-        exit(1);
+        sendresponse(400, "application/json", json_encode(array("result" => false, "error" => $L["Devices.YamlInvalid"])));
     }
 
-    $file = fopen($deviceDataFile, "w");
-    fwrite($file, $data);
-    fclose($file);
+    file_put_contents($deviceDataFile, $data);
     LOGOK("Update OK");
     LOGEND("Update finished");
-    sendresponse(200, "text/plain", $data);
+    sendresponse(200, "application/json", '{"result":true}');
 }
 
 /**
@@ -132,34 +173,112 @@ function setDevices($formData)
  */
 function getPid()
 {
-    //fetches the pid or 0 if not running
     global $serviceName;
-    $pid = (int) shell_exec("systemctl show --property MainPID --value " . escapeshellarg($serviceName));
-    return json_encode(array("pid" => $pid));
+    $state = zng_service_state($serviceName);
+    return json_encode(array("pid" => $state["pid"]));
 }
 
 /**
- * Zigbee and Thread channel. Both use the same 2.4 GHz channels (IEEE 802.15.4,
- * 11-26), so a Thread network of Matter2Lox on the same channel disturbs Zigbee.
+ * Zigbee, Thread and WLAN channel. All use the 2.4 GHz band, Zigbee and Thread
+ * even the same channels (IEEE 802.15.4, 11-26).
  */
-function getRadioInfo()
+function zng_radio_info()
 {
     list($zigbee, $zigbeeSource) = zng_zigbee_channel();
     list($thread, $threadSource) = zng_thread_channel();
+    list($wifi, $wifiInterface) = zng_wifi_channel();
     $level = "ok";
     if ($thread && $thread == $zigbee) {
         $level = "conflict";
     } elseif ($thread && abs($thread - $zigbee) == 1) {
         $level = "adjacent";
     }
-    return json_encode(array(
+    return array(
         "zigbee" => $zigbee,
         "zigbeeSource" => $zigbeeSource,
         "thread" => $thread,
         "threadSource" => $threadSource,
         "level" => $level,
+        "wifi" => $wifi,
+        "wifiInterface" => $wifiInterface,
+        "wifiLevel" => zng_wifi_overlap($zigbee, $wifi),
         "predecessors" => zng_predecessor_plugins(),
-    ));
+    );
+}
+
+/**
+ * Opens or closes pairing at runtime.
+ * zigbee2mqtt 2.x ignores permit_join in configuration.yaml, pairing is only
+ * possible through the MQTT request <topic>/bridge/request/permit_join with
+ * {"time": 1..254} (seconds) or {"time": 0} to close it again.
+ */
+function permitJoin($time)
+{
+    $time = trim((string) $time);
+    if (!preg_match('/^[0-9]{1,3}$/', $time) || (int) $time > 254) {
+        return json_encode(["result" => false, "message" => "invalid"]);
+    }
+    $time = (int) $time;
+    $bridge = new Z2mBridge();
+    if (!$bridge->connect()) {
+        return json_encode(["result" => false, "message" => "nobroker"]);
+    }
+    $answer = $bridge->request("permit_join", array("time" => $time), 5.0);
+    $bridge->close();
+    if ($answer === null) {
+        LOGWARN("permit_join: no answer from zigbee2mqtt within 5 s");
+        return json_encode(["result" => false, "message" => "noanswer"]);
+    }
+    if (!isset($answer["status"]) || $answer["status"] !== "ok") {
+        $error = isset($answer["error"]) ? (string) $answer["error"] : "";
+        LOGWARN("permit_join refused by zigbee2mqtt: " . $error);
+        return json_encode(["result" => false, "message" => "refused", "error" => $error]);
+    }
+    LOGINF("permit_join set to $time s");
+    return json_encode(["result" => true, "message" => $time > 0 ? "open" : "closed", "time" => $time]);
+}
+
+/**
+ * Sends bridge/request/networkmap (type raw, without routes) and returns
+ * {"result": true, "nodes": [...], "links": [...]} or {"result": false,
+ * "message": "nobroker" | "noanswer" | "refused", "error": "..."}.
+ * zigbee2mqtt asks every router for its neighbour table, which takes a few
+ * seconds in a small network and can take a minute or more in a large one.
+ */
+function networkMap()
+{
+    @set_time_limit(150);
+    $bridge = new Z2mBridge();
+    if (!$bridge->connect()) {
+        return json_encode(array("result" => false, "message" => "nobroker"));
+    }
+    $answer = $bridge->request("networkmap", array("type" => "raw", "routes" => false), 120.0);
+    $bridge->close();
+    if ($answer === null) {
+        return json_encode(array("result" => false, "message" => "noanswer"));
+    }
+    if (!isset($answer["status"]) || $answer["status"] !== "ok" || !isset($answer["data"]["value"]["nodes"])) {
+        return json_encode(array("result" => false, "message" => "refused", "error" => isset($answer["error"]) ? (string) $answer["error"] : ""));
+    }
+    $nodes = array();
+    foreach ($answer["data"]["value"]["nodes"] as $node) {
+        $nodes[] = array(
+            "id" => $node["ieeeAddr"],
+            "name" => isset($node["friendlyName"]) ? $node["friendlyName"] : $node["ieeeAddr"],
+            "type" => isset($node["type"]) ? $node["type"] : "",
+            "failed" => isset($node["failed"]) && is_array($node["failed"]) ? $node["failed"] : array()
+        );
+    }
+    $links = array();
+    foreach ($answer["data"]["value"]["links"] as $link) {
+        $links[] = array(
+            "source" => isset($link["source"]["ieeeAddr"]) ? $link["source"]["ieeeAddr"] : $link["sourceIeeeAddr"],
+            "target" => isset($link["target"]["ieeeAddr"]) ? $link["target"]["ieeeAddr"] : $link["targetIeeeAddr"],
+            "lqi" => isset($link["lqi"]) ? (int) $link["lqi"] : (isset($link["linkquality"]) ? (int) $link["linkquality"] : 0),
+            "relationship" => isset($link["relationship"]) ? (int) $link["relationship"] : -1
+        );
+    }
+    return json_encode(array("result" => true, "nodes" => $nodes, "links" => $links, "time" => date("H:i:s")));
 }
 
 /**
@@ -168,11 +287,10 @@ function getRadioInfo()
  */
 function getTemplate($kind, $device)
 {
-    global $mqttconfigfile, $configfile, $bridgeDevicesFile;
-    $mqttcfg = json_decode(file_get_contents($mqttconfigfile));
-    $serviceCfg = json_decode(file_get_contents($configfile));
-    $availability = !property_exists($serviceCfg, 'availability') || is_enabled($serviceCfg->availability);
-    $ios = zng_device_ios($mqttcfg->topic, zng_read_json($bridgeDevicesFile, array()), $availability);
+    global $bridgeDevicesFile;
+    $mqttcfg = MqttConfig::load();
+    $serviceCfg = ServiceConfig::load();
+    $ios = zng_device_ios($mqttcfg->topic, zng_read_json($bridgeDevicesFile, array()), is_enabled($serviceCfg->availability));
     if ($device !== "") {
         $ios = array_values(array_filter($ios, function ($d) use ($device) {
             return $d["name"] === $device;
@@ -214,6 +332,7 @@ function sendresponse($httpstatus, $contenttype, $response = null)
         204 => "NO CONTENT",
         304 => "NOT MODIFIED",
         400 => "BAD REQUEST",
+        403 => "FORBIDDEN",
         404 => "NOT FOUND",
         405 => "METHOD NOT ALLOWED",
         500 => "INTERNAL SERVER ERROR",

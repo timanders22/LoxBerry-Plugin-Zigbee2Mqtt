@@ -1,11 +1,18 @@
 [Unit]
 Description=Zigbee2MqttNG (zigbee2mqtt)
-After=network.target network.target createtmpfs.service loxberry.service
+After=network.target createtmpfs.service loxberry.service
 
 [Service]
+# LoxBerry environment (LBHOMEDIR, ...) for the PHP scripts
+EnvironmentFile=-/etc/environment
 Environment=PATH=/opt/zigbee2mqttng/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-Environment=Z2M_ONBOARD_URL=http://0.0.0.0:8881
-ExecStart=npm start
+# Written by update-config.php: Z2M_ONBOARD_URL with the configured frontend port
+EnvironmentFile=-REPLACELBPCONFIGDIR/service.env
+# Brings configuration.yaml up to date before every start, e.g. after the
+# broker credentials of the MQTT gateway changed. A failure does not block the start.
+ExecStartPre=-/usr/bin/php REPLACELBPBINDIR/update-config.php
+# Absolute path: systemd does not search the PATH set above for the command
+ExecStart=/opt/zigbee2mqttng/node/bin/node index.js
 WorkingDirectory=/opt/zigbee2mqttng
 StandardOutput=inherit
 StandardError=inherit

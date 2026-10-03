@@ -5,6 +5,10 @@ $configfile = LBPCONFIGDIR . "/service.json";
 $serviceConfigFile = LBPDATADIR . "/configuration.yaml";
 $deviceDataFile = LBPDATADIR . "/devices.yaml";
 $mqttGatewaySubscriptionFile = LBPCONFIGDIR . "/mqtt_subscriptions.cfg";
+$mqttGatewayResetFile = LBPCONFIGDIR . "/mqtt_resetaftersend.cfg";
+$mqttGatewayConversionFile = LBPCONFIGDIR . "/mqtt_conversions.cfg";
+// Environment of the systemd unit (Z2M_ONBOARD_URL), see config/zigbee2mqttng.service
+$serviceEnvFile = LBPCONFIGDIR . "/service.env";
 
 // Zigbee2MqttNG runs its own service and installation folder, so it never
 // collides with the original Zigbee2Mqtt plugin or its former name Zigbee2Lox
@@ -25,10 +29,18 @@ $bridgeDevicesFile = LBPDATADIR . "/zigbee2mqttng_devices.json";
 $bridgeGroupsFile = LBPDATADIR . "/zigbee2mqttng_groups.json";
 $bridgeInfoFile = LBPDATADIR . "/zigbee2mqttng_info.json";
 $hausTopicsFile = LBPDATADIR . "/zigbee2mqttng_haus.json";
+$hausNamesFile = LBPDATADIR . "/zigbee2mqttng_haus_namen.json";
+$bridgeStatusFile = LBPDATADIR . "/zigbee2mqttng_status.json";
+$availabilityFile = LBPDATADIR . "/zigbee2mqttng_availability.json";
+$notifyStateFile = LBPDATADIR . "/zigbee2mqttng_notify.json";
+$notifyScript = LBPBINDIR . "/notify.php";
+
+// Matter2Lox keeps its fixed names below haus/tuer/ here (since 0.9.35)
+$matter2loxHausNamesFile = LBHOMEDIR . "/config/plugins/matter2lox.haus_namen.json";
 
 // Matter2Lox keeps the Thread dataset of its border router here
 $matter2loxConfigFile = LBHOMEDIR . "/config/plugins/matter2lox/matter2lox.json";
 
 $L = LBSystem::readlanguage("language.ini");
 $navbar = array();
-$htmlhead = 'htmlhead';
+$htmlhead = '';

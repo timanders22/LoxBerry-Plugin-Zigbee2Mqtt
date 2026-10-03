@@ -1,0 +1,34 @@
+<style>
+    .zng-status td.zng-mark {
+        width: 1.5em;
+        font-weight: bold;
+        text-align: center;
+    }
+</style>
+
+<div class="wide">{{ 'Navbar.Test' | trans }}</div>
+<p><i>{{ 'Test.Desc' | trans }}</i></p>
+
+<p class="hint">
+    <span class="zng-ok">&#10004;</span> {{ 'Test.LegendOk' | trans }} &nbsp;
+    <span class="zng-fail">&#10008;</span> {{ 'Test.LegendFail' | trans }} &nbsp;
+    <span class="zng-hint">!</span> {{ 'Test.LegendHint' | trans }} &nbsp;
+    <span class="zng-info">i</span> {{ 'Test.LegendInfo' | trans }}
+</p>
+
+<table class="zng-table zng-status">
+    {% for row in rows %}
+    <tr>
+        <td class="zng-mark zng-{{ row.state }}">
+            {% if row.state == 'ok' %}&#10004;{% elseif row.state == 'fail' %}&#10008;{% elseif row.state == 'hint' %}!{% else %}i{% endif %}
+        </td>
+        <td>{{ row.label | trans }}</td>
+        <td>{{ row.detail }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div class="zng-center" style="gap:1em;margin-top:1em">
+    <span class="hint">{{ 'Test.Updated' | trans }} {{ time }}</span>
+    <a href="test.php" class="ui-btn ui-btn-inline ui-mini ui-corner-all" data-ajax="false">{{ 'Test.Refresh' | trans }}</a>
+</div>

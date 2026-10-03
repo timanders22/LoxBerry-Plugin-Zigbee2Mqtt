@@ -6,7 +6,7 @@ require_once "loxberry_web.php";
 $twig = Plugin::initializeTwig();
 
 // Include header and set page as active
-Plugin::createHeader(99);
+Plugin::createHeader(Plugin::LOG);
 
 $loglist_html = file_get_contents("http://localhost:" . lbwebserverport() . "/admin/system/logmanager.cgi?package=" .  urlencode($lbpplugindir) . "&header=none");
 echo $twig->render('log.html', array("loglist" => $loglist_html, "logfile" => LBPLOGDIR . "/zigbee2mqtt.log"));

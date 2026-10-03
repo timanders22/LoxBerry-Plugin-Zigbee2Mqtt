@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
+      <stop offset="0%" stop-color="#7dc424" />
+      <stop offset="65%" stop-color="#6dac20" />
+      <stop offset="100%" stop-color="#568819" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Badge Ring -->
+  <circle cx="256" cy="256" r="246" fill="url(#bg-grad)" />
+  <circle cx="256" cy="256" r="232" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" />
+
+  <g filter="url(#shadow)" fill="#ffffff">
+    <!-- Main Center Motif: Zigbee Wireless Mesh Network (Nach unten versetzt Y=215) -->
+    <g transform="translate(256, 215) scale(1.15)">
+      <!-- Mesh Network Lines (Connected Nodes) -->
+      <line x1="-55" y1="35" x2="0" y2="-50" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+      <line x1="55" y1="35" x2="0" y2="-50" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+      <line x1="-55" y1="35" x2="55" y2="35" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+      <line x1="-55" y1="35" x2="0" y2="10" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+      <line x1="55" y1="35" x2="0" y2="10" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+      <line x1="0" y1="-50" x2="0" y2="10" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+
+      <!-- Outer Nodes Circles -->
+      <circle cx="0" cy="-50" r="18" fill="#ffffff" />
+      <circle cx="-55" cy="35" r="18" fill="#ffffff" />
+      <circle cx="55" cy="35" r="18" fill="#ffffff" />
+      
+      <!-- Center Hub Node -->
+      <circle cx="0" cy="10" r="14" fill="#ffffff" />
+
+      <!-- Cutouts inside Nodes -->
+      <circle cx="0" cy="-50" r="8" fill="#6dac20" />
+      <circle cx="-55" cy="35" r="8" fill="#6dac20" />
+      <circle cx="55" cy="35" r="8" fill="#6dac20" />
+      <circle cx="0" cy="10" r="6" fill="#6dac20" />
+
+      <!-- Central Zigbee Wireless Signal Arcs from Apex Node -->
+      <path d="M -30 -65 A 32 32 0 0 1 30 -65" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" />
+      <path d="M -48 -80 A 52 52 0 0 1 48 -80" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+      <path d="M -66 -95 A 72 72 0 0 1 66 -95" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.5" />
+    </g>
+
+    <!-- Dashed Line -->
+    <path d="M 150 345 L 362 345" stroke="#ffffff" stroke-width="4" stroke-dasharray="6 8" opacity="0.8" />
+  </g>
+
+  <!-- Typography -->
+  <text x="256" y="388" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-weight="900" font-size="29" letter-spacing="0.5">Zigbee</text>
+  <text x="256" y="424" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-weight="bold" font-size="20" letter-spacing="3">LOXBERRY</text>
+</svg>

@@ -1,32 +1,4 @@
-<style>
-    .zng-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 16px;
-    }
-
-    .zng-table td,
-    .zng-table th {
-        border: 1px solid #ddd;
-        padding: 4px 8px;
-        text-align: left;
-        vertical-align: top;
-    }
-
-    .zng-table code {
-        word-break: break-all;
-    }
-
-    .zng-warning {
-        border: 1px solid #e0a000;
-        background: #fff8e0;
-        padding: 8px 12px;
-        margin: 8px 0;
-        border-radius: 4px;
-    }
-</style>
-
-<div class="wide">{{ 'Loxone.Title' | trans }}</div>
+<div class="wide">{{ 'Navbar.Loxone' | trans }}</div>
 <p><i>{{ 'Loxone.Desc' | trans }}</i></p>
 
 <table class="zng-table">
@@ -46,6 +18,18 @@
         <th>{{ 'Loxone.Booleans' | trans }}</th>
         <td>{% if gateway.convert_booleans %}{{ 'Loxone.BooleansOn' | trans }}{% else %}<span class="zng-warning">{{ 'Loxone.BooleansOff' | trans }}</span>{% endif %}</td>
     </tr>
+    {% if availability %}
+    <tr>
+        <th>{{ 'Loxone.Erreichbar' | trans }}</th>
+        <td><code>{{ 'Loxone.ErreichbarText' | trans }}</code></td>
+    </tr>
+    {% endif %}
+    {% if hasActions %}
+    <tr>
+        <th>{{ 'Loxone.Aktionen' | trans }}</th>
+        <td><code>{{ 'Loxone.AktionenText' | trans }}</code></td>
+    </tr>
+    {% endif %}
     {% if hausTopics %}
     <tr>
         <th>{{ 'Loxone.Haus' | trans }}</th>
@@ -91,7 +75,7 @@
         </tr>
         {% for in in device.inputs %}
         <tr>
-            <td>{{ in.title }}{% if in.unit %} ({{ in.unit }}){% endif %}{% if in.text %} - {{ 'Loxone.Text' | trans }}{% endif %}</td>
+            <td>{{ in.title }}{% if in.unit %} ({{ in.unit }}){% endif %}{% if in.text %} - {{ 'Loxone.Text' | trans }}{% endif %}{% if in.type == 'action' %} - {{ 'Loxone.Pulse' | trans }}{% endif %}</td>
             <td><code>{{ in.vi }}</code></td>
             <td>{% if not in.text %}<code>{{ in.udp }}=\v</code>{% endif %}</td>
         </tr>
