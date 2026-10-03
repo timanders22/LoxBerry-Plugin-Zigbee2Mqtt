@@ -1,12 +1,12 @@
 [Unit]
-Description=Zigbee2Lox (zigbee2mqtt)
+Description=Zigbee2MqttNG (zigbee2mqtt)
 After=network.target createtmpfs.service loxberry.service
 
 [Service]
-Environment=PATH=/opt/zigbee2lox/node/bin:REPLACELBPBINDIR:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PATH=/opt/zigbee2mqttng/node/bin:REPLACELBPBINDIR:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=Z2M_ONBOARD_URL=http://0.0.0.0:8881
 ExecStart=npm start
-WorkingDirectory=/opt/zigbee2lox
+WorkingDirectory=/opt/zigbee2mqttng
 StandardOutput=inherit
 StandardError=inherit
 Restart=on-abnormal

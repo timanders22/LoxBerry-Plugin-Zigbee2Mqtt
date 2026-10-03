@@ -6,7 +6,7 @@ require_once "model/ServiceConfig.php";
 require_once "model/MqttConfig.php";
 require_once LBPBINDIR . "/defines.php";
 require_once LBPBINDIR . "/formHelper.php";
-require_once LBPBINDIR . "/zigbee2lox.php";
+require_once LBPBINDIR . "/zigbee2mqttng.php";
 
 $log = LBLog::newLog(["name" => "Service"]);
 
@@ -27,7 +27,7 @@ if (isset($_GET["action"])) {
     } else if ($action == "getPid") {
         sendresponse(200, "application/json", getPid());
     } else if ($action == "getSerialPorts") {
-        sendresponse(200, "application/json", json_encode(z2l_serial_ports()));
+        sendresponse(200, "application/json", json_encode(zng_serial_ports()));
     } else if ($action == "getRadioInfo") {
         sendresponse(200, "application/json", getRadioInfo());
     } else if ($action == "getTemplate") {
@@ -144,8 +144,8 @@ function getPid()
  */
 function getRadioInfo()
 {
-    list($zigbee, $zigbeeSource) = z2l_zigbee_channel();
-    list($thread, $threadSource) = z2l_thread_channel();
+    list($zigbee, $zigbeeSource) = zng_zigbee_channel();
+    list($thread, $threadSource) = zng_thread_channel();
     $level = "ok";
     if ($thread && $thread == $zigbee) {
         $level = "conflict";
@@ -158,7 +158,7 @@ function getRadioInfo()
         "thread" => $thread,
         "threadSource" => $threadSource,
         "level" => $level,
-        "original" => z2l_original_plugin(),
+        "predecessors" => zng_predecessor_plugins(),
     ));
 }
 
@@ -172,7 +172,7 @@ function getTemplate($kind, $device)
     $mqttcfg = json_decode(file_get_contents($mqttconfigfile));
     $serviceCfg = json_decode(file_get_contents($configfile));
     $availability = !property_exists($serviceCfg, 'availability') || is_enabled($serviceCfg->availability);
-    $ios = z2l_device_ios($mqttcfg->topic, z2l_read_json($bridgeDevicesFile, array()), $availability);
+    $ios = zng_device_ios($mqttcfg->topic, zng_read_json($bridgeDevicesFile, array()), $availability);
     if ($device !== "") {
         $ios = array_values(array_filter($ios, function ($d) use ($device) {
             return $d["name"] === $device;
@@ -181,8 +181,8 @@ function getTemplate($kind, $device)
             sendresponse(404, "application/json", '{"error":"device not found"}');
         }
     }
-    $gateway = z2l_gateway_info();
-    $title = $device !== "" ? "Zigbee " . $device : "Zigbee2Lox";
+    $gateway = zng_gateway_info();
+    $title = $device !== "" ? "Zigbee " . $device : "Zigbee2MqttNG";
     $inputs = array();
     $outputs = array();
     foreach ($ios as $d) {
@@ -191,11 +191,11 @@ function getTemplate($kind, $device)
     }
     $file = preg_replace('/[^A-Za-z0-9_\-]+/', '_', $title);
     if ($kind == "in") {
-        $xml = z2l_xml_virtual_in_udp($title, $gateway["udpport"], $inputs);
+        $xml = zng_xml_virtual_in_udp($title, $gateway["udpport"], $inputs);
         $file = "VIU_" . $file . ".xml";
     } else if ($kind == "out") {
         $address = "/dev/udp/" . LBSystem::get_localip() . "/" . $gateway["udpinport"];
-        $xml = z2l_xml_virtual_out($title, $address, $outputs);
+        $xml = zng_xml_virtual_out($title, $address, $outputs);
         $file = "VO_" . $file . ".xml";
     } else {
         sendresponse(400, "application/json", '{"error":"unknown kind"}');

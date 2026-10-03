@@ -58,21 +58,21 @@ echo "<INFO> Plugin SBIN folder is: $PSBIN"
 echo "<INFO> Plugin BIN folder is: $PBIN"
 
 echo "<INFO> Stopping service if already running"
-if [ -e  /etc/systemd/system/zigbee2lox.service ]; then
-	systemctl stop zigbee2lox
-    systemctl disable zigbee2lox
-    unlink /etc/systemd/system/zigbee2lox.service
+if [ -e  /etc/systemd/system/zigbee2mqttng.service ]; then
+	systemctl stop zigbee2mqttng
+    systemctl disable zigbee2mqttng
+    unlink /etc/systemd/system/zigbee2mqttng.service
     systemctl daemon-reload
 fi
 
-if [ -e /opt/zigbee2lox ]; then
+if [ -e /opt/zigbee2mqttng ]; then
     echo "<INFO> Removing zigbee2mqtt installation"
-    rm -f -r /opt/zigbee2lox
+    rm -f -r /opt/zigbee2mqttng
 fi
 
-if [ -f "$PDATA/zigbee2lox_haus.json" ] && [ -f "$PBIN/clear-haus-topics.php" ]; then
+if [ -f "$PDATA/zigbee2mqttng_haus.json" ] && [ -f "$PBIN/clear-haus-topics.php" ]; then
     echo "<INFO> Removing haus/tuer topics"
-    php "$PBIN/clear-haus-topics.php" "$PDATA/zigbee2lox_haus.json"
+    php "$PBIN/clear-haus-topics.php" "$PDATA/zigbee2mqttng_haus.json"
 fi
 
 # Exit with Status 0

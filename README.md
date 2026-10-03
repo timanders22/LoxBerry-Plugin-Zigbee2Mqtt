@@ -1,25 +1,31 @@
-# Zigbee2Lox – LoxBerry-Plugin
+# Zigbee2MqttNG – LoxBerry-Plugin
 
-Zigbee2Lox bringt [Zigbee2MQTT](https://www.zigbee2mqtt.io/) als Plugin auf den LoxBerry und ist auf das
+Zigbee2MqttNG bringt [Zigbee2MQTT](https://www.zigbee2mqtt.io/) als Plugin auf den LoxBerry und ist auf das
 Zusammenspiel mit anderen Plugins ausgelegt – insbesondere mit
 [Matter2Lox (Matter to Loxone)](https://github.com/timanders22/LoxBerry-Plugin-Matter2Lox).
 
-Zigbee2Lox ist ein Fork des Plugins [Zigbee2Mqtt](https://github.com/romanlum/LoxBerry-Plugin-Zigbee2Mqtt) (Apache-2.0, siehe `LICENSE`).
-Es ist ein **eigenständiges Plugin** (Name/Ordner `zigbee2lox`, Dienst `zigbee2lox`, Installation in `/opt/zigbee2lox`)
-und kollidiert deshalb nicht mit dem Original.
+Zigbee2MqttNG ist ein Fork des Plugins [Zigbee2Mqtt](https://github.com/romanlum/LoxBerry-Plugin-Zigbee2Mqtt) (Apache-2.0, siehe `LICENSE`).
+Es ist ein **eigenständiges Plugin** (Name/Ordner `zigbee2mqttng`, Dienst `zigbee2mqttng`, Installation in `/opt/zigbee2mqttng`)
+und kollidiert deshalb nicht mit dem Original. Bis Version 4.0.0 hieß das Plugin **Zigbee2Lox**.
 
-## Umstieg vom Original-Plugin
+## Umstieg vom Original-Plugin oder von Zigbee2Lox
 
-Bei der Erstinstallation übernimmt Zigbee2Lox automatisch das Zigbee-Netz des Original-Plugins
-(`configuration.yaml`, Datenbank, Netzwerkschlüssel, `devices.yaml`, `groups.yaml` sowie die MQTT- und
-Dienst-Einstellungen). Kein Gerät muss neu angelernt werden, das MQTT-Topic bleibt gleich.
-Der Dienst `zigbee2mqtt` des Originals wird dabei gestoppt und deaktiviert.
+Bei der Erstinstallation übernimmt Zigbee2MqttNG automatisch das Zigbee-Netz des Vorgängers – zuerst von
+Zigbee2Lox, sonst vom Original-Plugin Zigbee2Mqtt (`configuration.yaml`, Datenbank, Netzwerkschlüssel,
+`devices.yaml`, `groups.yaml` sowie die MQTT- und Dienst-Einstellungen). Kein Gerät muss neu angelernt werden,
+das MQTT-Topic bleibt gleich. Der Dienst des Vorgängers (`zigbee2lox` bzw. `zigbee2mqtt`) wird dabei gestoppt
+und deaktiviert.
 
-**Danach bitte das Original-Plugin deinstallieren.** Ein Update des Originals würde seinen Dienst sonst wieder
+Zigbee2Lox 4.0.0 holt seine Updates aus diesem Repository. Sein automatisches Update installiert deshalb
+Zigbee2MqttNG als **neues** Plugin daneben, das dann wie oben das Netz übernimmt. Die Haus-Themen gehen dabei auf
+Zigbee2MqttNG über, und die automatischen Updates von Zigbee2Lox werden abgeschaltet, damit es Zigbee2MqttNG
+nicht jede Nacht erneut installiert.
+
+**Danach bitte den Vorgänger deinstallieren.** Ein Update des Vorgängers würde seinen Dienst sonst wieder
 starten, und zwei Dienste können nicht denselben Zigbee-Adapter benutzen. Die Einstellungsseite warnt, solange
-das Original noch installiert ist.
+ein Vorgänger noch installiert ist.
 
-## Was Zigbee2Lox zusätzlich kann
+## Was Zigbee2MqttNG zusätzlich kann
 
 ### USB-Adapter mit festem Pfad
 Die Einstellungsseite listet alle Adapter unter `/dev/serial/by-id/` und warnt bei Namen wie `/dev/ttyACM0`.
@@ -33,7 +39,7 @@ OpenThread-Border-Routers auf Port 8081) und warnt, wenn beide gleich oder direk
 Achtung: Nach einem Kanalwechsel müssen alle Zigbee-Geräte neu angelernt werden.
 
 ### Weniger Last am MQTT Gateway
-Standardmäßig registriert Zigbee2Lox beim MQTT Gateway nur noch die Zustands-Themen der Geräte und Gruppen
+Standardmäßig registriert Zigbee2MqttNG beim MQTT Gateway nur noch die Zustands-Themen der Geräte und Gruppen
 (plus `bridge/state`) statt `<topic>/#`. Die großen `bridge/*`-Nachrichten (Geräteliste, Logging) erreichen den
 Miniserver nicht mehr. Die Liste wird automatisch nachgeführt, wenn Geräte dazukommen, gehen oder umbenannt werden.
 Wer das alte Verhalten braucht, stellt „An den Miniserver weiterleiten“ auf „alles“.
@@ -70,6 +76,6 @@ Der Port der Weboberfläche (Standard 8881) ist einstellbar.
 ## Technik
 
 Die Verbindung zwischen Zigbee2MQTT und dem Plugin übernimmt eine externe Erweiterung
-(`bin/zigbee2lox_extension.mjs`, wird nach `data/external_extensions/zigbee2lox.mjs` kopiert).
+(`bin/zigbee2mqttng_extension.mjs`, wird nach `data/external_extensions/zigbee2mqttng.mjs` kopiert).
 Sie schreibt die Geräteliste für die Weboberfläche, pflegt die Abos des MQTT Gateways und sendet die Haus-Themen.
-Gesteuert wird sie über `data/zigbee2lox.json`, das `bin/update-config.php` bei jedem Speichern neu schreibt.
+Gesteuert wird sie über `data/zigbee2mqttng.json`, das `bin/update-config.php` bei jedem Speichern neu schreibt.

@@ -203,11 +203,11 @@ function loadRadioInfo() {
         if (info.thread) {
             text += "<br>" + box.data("thread").replace("%s", info.thread).replace("%t", escapeHtml(info.threadSource));
             if (info.level === "conflict") {
-                text = `<div class="z2l-error">${text}<br>${box.data("conflict")}</div>`;
+                text = `<div class="zng-error">${text}<br>${box.data("conflict")}</div>`;
             } else if (info.level === "adjacent") {
-                text = `<div class="z2l-warning">${text}<br>${box.data("adjacent")}</div>`;
+                text = `<div class="zng-warning">${text}<br>${box.data("adjacent")}</div>`;
             } else {
-                text += `<br><span class="z2l-ok">${box.data("ok")}</span>`;
+                text += `<br><span class="zng-ok">${box.data("ok")}</span>`;
             }
         }
         box.html(text);

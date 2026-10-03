@@ -2,7 +2,7 @@
 require_once 'include/plugin.php';
 require_once 'model/ServiceConfig.php';
 require_once 'model/MqttConfig.php';
-require_once LBPBINDIR . '/zigbee2lox.php';
+require_once LBPBINDIR . '/zigbee2mqttng.php';
 
 $twig = Plugin::initializeTwig();
 
@@ -23,8 +23,8 @@ else
 }
 echo $twig->render('index.html', array(
     "mqtt_installed" => $mqtt_installed,
-    "original" => z2l_original_plugin(),
-    "gateway" => z2l_gateway_info(),
+    "predecessors" => zng_predecessor_plugins(),
+    "gateway" => zng_gateway_info(),
 ));
 
 //creates the footer

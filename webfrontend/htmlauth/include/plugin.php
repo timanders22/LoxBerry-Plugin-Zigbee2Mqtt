@@ -22,7 +22,7 @@ class Plugin
         global $configfile;
         $serviceCfg = json_decode(file_get_contents($configfile));
 
-        $template_title = "Zigbee2Lox";
+        $template_title = "Zigbee2MqttNG";
         $helplink = "https://www.loxwiki.eu/";
         $helptemplate = "help.html";
 

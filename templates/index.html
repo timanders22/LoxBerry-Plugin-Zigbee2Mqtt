@@ -51,7 +51,7 @@
         color: red;
     }
 
-    .z2l-warning {
+    .zng-warning {
         border: 1px solid #e0a000;
         background: #fff8e0;
         padding: 8px 12px;
@@ -59,7 +59,7 @@
         border-radius: 4px;
     }
 
-    .z2l-error {
+    .zng-error {
         border: 1px solid #c00;
         background: #ffecec;
         padding: 8px 12px;
@@ -67,7 +67,7 @@
         border-radius: 4px;
     }
 
-    .z2l-ok {
+    .zng-ok {
         color: green;
     }
 
@@ -80,16 +80,16 @@
     }
 </style>
 
-{% if original.installed %}
-<div class="z2l-warning">
-    <b>{{ 'Common.OriginalTitle' | trans }}</b><br>
-    {% if original.active %}{{ 'Common.OriginalActive' | trans }}{% else %}{{ 'Common.OriginalInstalled' | trans }}{% endif %}
+{% for p in predecessors %}
+<div class="zng-warning">
+    <b>{{ 'Common.OriginalTitle' | trans | replace({'%s': p.title}) }}</b><br>
+    {% if p.active %}{{ 'Common.OriginalActive' | trans }}{% else %}{{ 'Common.OriginalInstalled' | trans }}{% endif %}
 </div>
-{% endif %}
+{% endfor %}
 
 <!-- Form SETTINGS -->
 <form id="ServiceConfig" onsubmit="return false;">
-    <div class="wide">Zigbee2Lox</div>
+    <div class="wide">Zigbee2MqttNG</div>
     <p><i>{{ 'ServiceConfig.Desc' | trans }}</i></p>
 
     <!-- Service -->
@@ -136,7 +136,7 @@
             <input width="100%" value="" id="ServiceConfig[port]" name="ServiceConfig[port]" type="text"
                 class="textfield" list="serialports" autocomplete="off">
             <datalist id="serialports"></datalist>
-            <div id="portwarning" class="z2l-warning" style="display:none" data-text="{{ 'ServiceConfig.PortUnstable' | trans }}"></div>
+            <div id="portwarning" class="zng-warning" style="display:none" data-text="{{ 'ServiceConfig.PortUnstable' | trans }}"></div>
             <div id="portlist" class="hint" data-title="{{ 'ServiceConfig.PortList' | trans }}"></div>
         </div>
         <div class="lb_flex-item-spacer"></div>

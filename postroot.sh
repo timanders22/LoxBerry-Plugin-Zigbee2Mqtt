@@ -56,13 +56,15 @@ echo "<INFO> Plugin installation folder is: $PDIR"
 #source version file
 . ${PTEMPPATH}/version.sh
 
-# Zigbee2Lox installs into its own folder and runs its own service, so it never
-# collides with the original Zigbee2Mqtt plugin (/opt/zigbee2mqtt, zigbee2mqtt.service).
-INSTALLDIR=/opt/zigbee2lox
-SERVICE=zigbee2lox
-# Folder and service of the original plugin, used to take over its data once
-ORIGDIR=zigbee2mqtt
-ORIGSERVICE=zigbee2mqtt
+# Zigbee2MqttNG installs into its own folder and runs its own service, so it never
+# collides with the original Zigbee2Mqtt plugin (/opt/zigbee2mqtt, zigbee2mqtt.service)
+# or with Zigbee2Lox, the former name of this plugin (/opt/zigbee2lox, zigbee2lox.service).
+INSTALLDIR=/opt/zigbee2mqttng
+SERVICE=zigbee2mqttng
+# Folders (= service names) of the predecessor plugins whose network is taken
+# over once on a fresh install. The first one found wins: Zigbee2Lox already
+# took over the original, so it holds the newest data.
+PREDECESSORS="zigbee2lox zigbee2mqtt"
 
 
 ISUPGRADE=0
@@ -150,15 +152,22 @@ ln -f -s $PLOG $INSTALLDIR/log
 echo "<INFO> Updating data folder"
 ln -f -s $PDATA $INSTALLDIR/data
 
-# Fresh installation next to (or instead of) the original Zigbee2Mqtt plugin:
-# take over its network so no device has to be paired again.
+# Fresh installation next to (or instead of) a predecessor plugin: take over
+# its network so no device has to be paired again.
 MIGRATED=0
-ORIGDATA=$LBHOMEDIR/data/plugins/$ORIGDIR
-ORIGCONFIG=$LBHOMEDIR/config/plugins/$ORIGDIR
-if [ "$ISUPGRADE" -eq "0" ] && [ "$PDIR" != "$ORIGDIR" ] && [ -f "$ORIGDATA/configuration.yaml" ] && [ ! -f "$PDATA/configuration.yaml" ]; then
-    echo "<INFO> Original Zigbee2Mqtt plugin found - taking over its Zigbee network"
+for ORIGDIR in $PREDECESSORS; do
+    ORIGSERVICE=$ORIGDIR
+    ORIGDATA=$LBHOMEDIR/data/plugins/$ORIGDIR
+    ORIGCONFIG=$LBHOMEDIR/config/plugins/$ORIGDIR
+    if [ "$ISUPGRADE" -ne "0" ] || [ "$MIGRATED" -ne "0" ] || [ "$PDIR" = "$ORIGDIR" ]; then
+        continue
+    fi
+    if [ ! -f "$ORIGDATA/configuration.yaml" ] || [ -f "$PDATA/configuration.yaml" ]; then
+        continue
+    fi
+    echo "<INFO> Plugin $ORIGDIR found - taking over its Zigbee network"
     if systemctl is-active --quiet $ORIGSERVICE; then
-        echo "<INFO> Stopping service $ORIGSERVICE of the original plugin (only one service may use the Zigbee adapter)"
+        echo "<INFO> Stopping service $ORIGSERVICE (only one service may use the Zigbee adapter)"
         systemctl stop $ORIGSERVICE
     fi
     if systemctl is-enabled --quiet $ORIGSERVICE 2>/dev/null; then
@@ -170,9 +179,35 @@ if [ "$ISUPGRADE" -eq "0" ] && [ "$PDIR" != "$ORIGDIR" ] && [ -f "$ORIGDATA/conf
             cp -f "$ORIGCONFIG/$f" "$PCONFIG/$f"
         fi
     done
+
+    if [ "$ORIGDIR" = "zigbee2lox" ]; then
+        # The copied bridge extension of Zigbee2Lox must not be loaded next to
+        # ours, its control file is rewritten by update-config.php below.
+        rm -f "$PDATA/external_extensions/zigbee2lox.mjs" "$PDATA/zigbee2lox.json"
+        for f in devices groups info haus; do
+            if [ -f "$PDATA/zigbee2lox_$f.json" ]; then
+                mv -f "$PDATA/zigbee2lox_$f.json" "$PDATA/zigbee2mqttng_$f.json"
+            fi
+        done
+        # The haus/tuer topics belong to this plugin now - the uninstall of
+        # Zigbee2Lox must not delete them.
+        rm -f "$ORIGDATA/zigbee2lox_haus.json"
+        # Zigbee2Lox fetches its updates from this repository. Without this its
+        # auto update would install Zigbee2MqttNG again every night.
+        perl -I"$LBHOMEDIR/libs/perllib" -e '
+            use LoxBerry::System::PluginDB;
+            foreach my $md5 (LoxBerry::System::PluginDB->search(folder => "zigbee2lox")) {
+                my $plugin = LoxBerry::System::PluginDB->plugin(md5 => $md5);
+                next if (!$plugin);
+                $plugin->{autoupdate} = "0";
+                $plugin->save();
+            }' && echo "<INFO> Automatic updates of Zigbee2Lox disabled" \
+            || echo "<WARNING> Could not disable the automatic updates of Zigbee2Lox. Please uninstall Zigbee2Lox."
+    fi
+
     MIGRATED=1
-    echo "<WARNING> The original Zigbee2Mqtt plugin is still installed. Please uninstall it - an update of the original would start its service again and both would fight for the Zigbee adapter."
-fi
+    echo "<WARNING> The plugin $ORIGDIR is still installed. Please uninstall it - an update of it would start its service again and both would fight for the Zigbee adapter."
+done
 
 echo "<INFO> Refresh config"
 php $PBIN/update-config.php
@@ -190,9 +225,9 @@ fi
 
 echo "<INFO> Updating service config"
 if [ "$PIVERS" = 'type_0' ] || [ "$PIVERS" = 'type_1' ]; then
-    ln -f -s $PCONFIG/zigbee2loxNode10.service /etc/systemd/system/$SERVICE.service
+    ln -f -s $PCONFIG/zigbee2mqttngNode10.service /etc/systemd/system/$SERVICE.service
 else
-    ln -f -s $PCONFIG/zigbee2lox.service /etc/systemd/system/$SERVICE.service
+    ln -f -s $PCONFIG/zigbee2mqttng.service /etc/systemd/system/$SERVICE.service
 fi
 
 # Enable auto-start of the service

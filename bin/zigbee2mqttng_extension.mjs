@@ -1,7 +1,7 @@
-// Zigbee2Lox bridge extension for zigbee2mqtt.
+// Zigbee2MqttNG bridge extension for zigbee2mqtt.
 //
-// Installed by bin/update-config.php as data/external_extensions/zigbee2lox.mjs
-// and configured through data/zigbee2lox.json. It
+// Installed by bin/update-config.php as data/external_extensions/zigbee2mqttng.mjs
+// and configured through data/zigbee2mqttng.json. It
 //  - keeps the device list (bridge/devices, bridge/groups, bridge/info) as files
 //    for the web frontend (Loxone templates, radio channel check),
 //  - keeps the subscriptions of the LoxBerry MQTT gateway to the state topics of
@@ -55,7 +55,7 @@ function topicOk(name) {
     return typeof name === "string" && name !== "" && !/[+#]/.test(name);
 }
 
-// Must give the same result as z2l_subscription_lines() in bin/zigbee2lox.php
+// Must give the same result as zng_subscription_lines() in bin/zigbee2mqttng.php
 export function subscriptionLines(base, devices, groups, availability) {
     const lines = [`${base}/bridge/state`];
     for (const device of devices ?? []) {
@@ -88,7 +88,7 @@ export function hausValues(state) {
     return values;
 }
 
-export default class Zigbee2LoxExtension {
+export default class Zigbee2MqttNGExtension {
     constructor(zigbee, mqtt, state, publishEntityState, eventBus, enableDisableExtension, restartCallback, addExtension, settings, logger) {
         this.zigbee = zigbee;
         this.mqtt = mqtt;
@@ -103,7 +103,7 @@ export default class Zigbee2LoxExtension {
 
     async start() {
         const dataDir = process.env.ZIGBEE2MQTT_DATA || path.join(process.cwd(), "data");
-        this.cfg = readJson(path.join(dataDir, "zigbee2lox.json"), {});
+        this.cfg = readJson(path.join(dataDir, "zigbee2mqttng.json"), {});
         this.base = this.settings.get().mqtt.base_topic;
 
         this.eventBus.onMQTTMessagePublished(this, (data) => this.onPublished(data));
@@ -179,7 +179,7 @@ export default class Zigbee2LoxExtension {
         }
         const groups = this.groups ?? readJson(this.cfg.groupsFile, []);
         if (writeIfChanged(this.cfg.subscriptionFile, subscriptionLines(this.base, this.devices, groups, this.cfg.availability))) {
-            this.logger.info("Zigbee2Lox: MQTT gateway subscriptions updated");
+            this.logger.info("Zigbee2MqttNG: MQTT gateway subscriptions updated");
         }
     }
 
@@ -272,7 +272,7 @@ export default class Zigbee2LoxExtension {
         }
         if (removed.length > 0) {
             writeIfChanged(this.cfg.hausFile, JSON.stringify(remembered, null, 1));
-            this.logger.info(`Zigbee2Lox: removed ${removed.length} topic(s) below ${HAUS_BASE}/${HAUS_ROOT}`);
+            this.logger.info(`Zigbee2MqttNG: removed ${removed.length} topic(s) below ${HAUS_BASE}/${HAUS_ROOT}`);
         }
     }
 }

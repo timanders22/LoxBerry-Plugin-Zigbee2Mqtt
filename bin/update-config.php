@@ -3,7 +3,7 @@ require_once "loxberry_system.php";
 require_once "loxberry_log.php";
 require_once "loxberry_io.php";
 require_once LBPBINDIR . "/defines.php";
-require_once LBPBINDIR . "/zigbee2lox.php";
+require_once LBPBINDIR . "/zigbee2mqttng.php";
 
 
 $log = LBLog::newLog(["name" => "Service"]);
@@ -40,7 +40,7 @@ $zigbee2mqttConfig["groups"] = "groups.yaml";
 
 
 
-//defaults for settings added in Zigbee2Lox
+//defaults for settings added in Zigbee2MqttNG
 if (!property_exists($mqttcfg, 'forwardMode')) {
     $mqttcfg->forwardMode = "devices";
 }
@@ -66,21 +66,21 @@ if (is_enabled($mqttcfg->usemqttgateway)) {
 // never reach the Miniserver. The list is kept up to date by the extension
 // whenever devices join, leave or are renamed.
 if (!$registerTopics) {
-    z2l_write_if_changed($mqttGatewaySubscriptionFile, "");
+    zng_write_if_changed($mqttGatewaySubscriptionFile, "");
 } elseif ($mqttcfg->forwardMode == "all" || !is_file($bridgeDevicesFile)) {
     // without a device list yet (first start) everything is forwarded once
-    z2l_write_if_changed($mqttGatewaySubscriptionFile, $mqttcfg->topic . "/#");
+    zng_write_if_changed($mqttGatewaySubscriptionFile, $mqttcfg->topic . "/#");
 } else {
-    z2l_write_if_changed($mqttGatewaySubscriptionFile, z2l_subscription_lines(
+    zng_write_if_changed($mqttGatewaySubscriptionFile, zng_subscription_lines(
         $mqttcfg->topic,
-        z2l_read_json($bridgeDevicesFile, array()),
-        z2l_read_json($bridgeGroupsFile, array()),
+        zng_read_json($bridgeDevicesFile, array()),
+        zng_read_json($bridgeGroupsFile, array()),
         $availability
     ));
 }
 
 // Availability arrives as {"state":"online"} - the gateway turns it into 0/1
-z2l_write_if_changed(LBPCONFIGDIR . "/mqtt_conversions.cfg", $registerTopics && $availability ? "online=1\noffline=0\n" : "");
+zng_write_if_changed(LBPCONFIGDIR . "/mqtt_conversions.cfg", $registerTopics && $availability ? "online=1\noffline=0\n" : "");
 
 $zigbee2mqttConfig["mqtt"]["base_topic"] = $mqttcfg->topic;
 $zigbee2mqttConfig["mqtt"]["server"] = "mqtt://" . $creds['brokerhost'] . ":" . $creds['brokerport'];
@@ -148,9 +148,9 @@ if (!is_dir(dirname($extensionTargetFile))) {
     mkdir(dirname($extensionTargetFile), 0755, true);
 }
 if (is_file($extensionSourceFile)) {
-    z2l_write_if_changed($extensionTargetFile, file_get_contents($extensionSourceFile));
+    zng_write_if_changed($extensionTargetFile, file_get_contents($extensionSourceFile));
 }
-z2l_write_if_changed($bridgeConfigFile, json_encode(array(
+zng_write_if_changed($bridgeConfigFile, json_encode(array(
     "registerTopics" => $registerTopics,
     "forwardMode" => $mqttcfg->forwardMode,
     "subscriptionFile" => $mqttGatewaySubscriptionFile,

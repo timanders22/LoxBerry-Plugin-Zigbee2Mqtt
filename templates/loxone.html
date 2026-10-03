@@ -1,23 +1,23 @@
 <style>
-    .z2l-table {
+    .zng-table {
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 16px;
     }
 
-    .z2l-table td,
-    .z2l-table th {
+    .zng-table td,
+    .zng-table th {
         border: 1px solid #ddd;
         padding: 4px 8px;
         text-align: left;
         vertical-align: top;
     }
 
-    .z2l-table code {
+    .zng-table code {
         word-break: break-all;
     }
 
-    .z2l-warning {
+    .zng-warning {
         border: 1px solid #e0a000;
         background: #fff8e0;
         padding: 8px 12px;
@@ -29,7 +29,7 @@
 <div class="wide">{{ 'Loxone.Title' | trans }}</div>
 <p><i>{{ 'Loxone.Desc' | trans }}</i></p>
 
-<table class="z2l-table">
+<table class="zng-table">
     <tr>
         <th>{{ 'Loxone.GatewayVersion' | trans }}</th>
         <td>{% if gateway.version %}V{{ gateway.version }}{% else %}?{% endif %}</td>
@@ -44,7 +44,7 @@
     </tr>
     <tr>
         <th>{{ 'Loxone.Booleans' | trans }}</th>
-        <td>{% if gateway.convert_booleans %}{{ 'Loxone.BooleansOn' | trans }}{% else %}<span class="z2l-warning">{{ 'Loxone.BooleansOff' | trans }}</span>{% endif %}</td>
+        <td>{% if gateway.convert_booleans %}{{ 'Loxone.BooleansOn' | trans }}{% else %}<span class="zng-warning">{{ 'Loxone.BooleansOff' | trans }}</span>{% endif %}</td>
     </tr>
     {% if hausTopics %}
     <tr>
@@ -55,13 +55,13 @@
 </table>
 
 {% if not hasDeviceList %}
-<div class="z2l-warning">{{ 'Loxone.NoDeviceList' | trans }}</div>
+<div class="zng-warning">{{ 'Loxone.NoDeviceList' | trans }}</div>
 {% elseif devices|length == 0 %}
-<div class="z2l-warning">{{ 'Loxone.NoDevices' | trans }}</div>
+<div class="zng-warning">{{ 'Loxone.NoDevices' | trans }}</div>
 {% else %}
 
 {% if gateway.use_udp and not gateway.udpport %}
-<div class="z2l-warning">{{ 'Loxone.NoUdpPort' | trans }}</div>
+<div class="zng-warning">{{ 'Loxone.NoUdpPort' | trans }}</div>
 {% endif %}
 
 <p>
@@ -83,7 +83,7 @@
             href="ajax.php?action=getTemplate&kind=out&device={{ device.name | url_encode }}">{{ 'Loxone.Outputs' | trans }}</a>
         {% endif %}
     </p>
-    <table class="z2l-table">
+    <table class="zng-table">
         <tr>
             <th>{{ 'Loxone.Name' | trans }}</th>
             <th>{{ 'Loxone.HttpName' | trans }}</th>
@@ -98,7 +98,7 @@
         {% endfor %}
     </table>
     {% if device.outputs|length > 0 %}
-    <table class="z2l-table">
+    <table class="zng-table">
         <tr>
             <th>{{ 'Loxone.Output' | trans }}</th>
             <th>{{ 'Loxone.CmdOn' | trans }}</th>

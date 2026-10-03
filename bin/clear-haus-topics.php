@@ -4,7 +4,7 @@
  * published (used on uninstall). The empty "retain <topic> " goes through
  * the UDP input of the MQTT gateway, which deletes the retained message.
  *
- * Usage: php clear-haus-topics.php <path to zigbee2lox_haus.json>
+ * Usage: php clear-haus-topics.php <path to zigbee2mqttng_haus.json>
  */
 $file = isset($argv[1]) ? $argv[1] : "";
 $topics = is_file($file) ? json_decode(file_get_contents($file), true) : null;
